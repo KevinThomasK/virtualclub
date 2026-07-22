@@ -15,12 +15,27 @@ import type { AvatarOutfit } from "@/lib/avatarCatalog";
 import type { LiveTarget } from "@/hooks/useConcertRoom";
 import type { EmoteType, PlayerSnapshot } from "@/lib/types";
 
-const MOVE_SPEED = 5;
+const MOVE_SPEED = 5.4;
 const CAMERA_DISTANCE = 6.5;
 const MOUSE_YAW_SENSITIVITY = 0.004;
 const MOUSE_PITCH_SENSITIVITY = 0.003;
 const MIN_CAMERA_PITCH = 0.2;
 const MAX_CAMERA_PITCH = 1.15;
+/** Frame-rate independent damping helpers (higher = snappier). */
+const CAMERA_FOLLOW = 14;
+const TURN_SPEED = 16;
+const MAX_FRAME_DELTA = 0.05;
+
+/** Shortest-arc angle blend — avoids full spins when turning past ±π. */
+function lerpAngle(from: number, to: number, t: number) {
+  const delta =
+    THREE.MathUtils.euclideanModulo(to - from + Math.PI, Math.PI * 2) - Math.PI;
+  return from + delta * t;
+}
+
+function damp(current: number, target: number, lambda: number, delta: number) {
+  return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-lambda * delta));
+}
 
 type SceneProps = {
   sessionId: string | null;
@@ -356,7 +371,8 @@ function CameraRig({
   const desired = useRef(new THREE.Vector3());
   const lookAt = useRef(new THREE.Vector3());
 
-  useFrame((_state, delta) => {
+  useFrame((_state, rawDelta) => {
+    const delta = Math.min(rawDelta, MAX_FRAME_DELTA);
     const yaw = yawRef.current;
     const pitch = pitchRef.current;
     const horizontalDist = CAMERA_DISTANCE * Math.cos(pitch);
@@ -371,9 +387,13 @@ function CameraRig({
     camZ = THREE.MathUtils.clamp(camZ, CLUB_BOUNDS.minZ + 3, CLUB_BOUNDS.maxZ - 3);
 
     desired.current.set(camX, target.y + height, camZ);
-    camera.position.lerp(desired.current, Math.min(1, delta * 5));
+    // Exponential damping stays smooth at any framerate (no frame-spike jerks).
+    const blend = 1 - Math.exp(-CAMERA_FOLLOW * delta);
+    camera.position.lerp(desired.current, blend);
 
-    lookAt.current.set(target.x, target.y + 1.5, target.z);
+    lookAt.current.x = damp(lookAt.current.x, target.x, CAMERA_FOLLOW, delta);
+    lookAt.current.y = damp(lookAt.current.y, target.y + 1.5, CAMERA_FOLLOW, delta);
+    lookAt.current.z = damp(lookAt.current.z, target.z, CAMERA_FOLLOW, delta);
     camera.lookAt(lookAt.current);
   });
 
@@ -589,7 +609,8 @@ function LocalController({
     }
   }, [localSeat]);
 
-  useFrame((_state, delta) => {
+  useFrame((_state, rawDelta) => {
+    const delta = Math.min(rawDelta, MAX_FRAME_DELTA);
     const keys = keysRef.current;
     const inEmote = performance.now() < emoteUntilRef.current;
     const forward =
@@ -612,12 +633,18 @@ function LocalController({
 
       positionRef.current.x += moveDir.x * MOVE_SPEED * delta;
       positionRef.current.z += moveDir.z * MOVE_SPEED * delta;
-      rotationRef.current = Math.atan2(moveDir.x, moveDir.z);
+      // Smooth turn toward move direction — no snap when WASD changes.
+      const facing = Math.atan2(moveDir.x, moveDir.z);
+      rotationRef.current = lerpAngle(
+        rotationRef.current,
+        facing,
+        1 - Math.exp(-TURN_SPEED * delta),
+      );
     } else if (!inEmote && !isLookingRef.current && !seated) {
-      rotationRef.current = THREE.MathUtils.lerp(
+      rotationRef.current = lerpAngle(
         rotationRef.current,
         cameraYawRef.current,
-        Math.min(1, delta * 14),
+        1 - Math.exp(-TURN_SPEED * 0.7 * delta),
       );
     }
 
@@ -656,7 +683,7 @@ function LocalController({
 
     const marker = markerRef.current;
     if (marker) {
-      const pulse = 1 + Math.sin(_state.clock.elapsedTime * 4) * 0.08;
+      const pulse = 1 + Math.sin(_state.clock.elapsedTime * 3.2) * 0.05;
       marker.scale.set(pulse, pulse, 1);
     }
 
@@ -677,7 +704,7 @@ function LocalController({
     }
 
     const now = performance.now();
-    if (now - lastSentRef.current > 66) {
+    if (now - lastSentRef.current > 50) {
       lastSentRef.current = now;
       onMove({
         x: positionRef.current.x,

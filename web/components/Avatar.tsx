@@ -123,11 +123,11 @@ function ProceduralAvatar({
         group.position.copy(scratchTarget);
         group.rotation.y = liveTarget.rotY;
       } else {
-        group.position.lerp(scratchTarget, Math.min(1, delta * 12));
+      group.position.lerp(scratchTarget, Math.min(1, delta * 10));
         group.rotation.y = lerpAngle(
           group.rotation.y,
           liveTarget.rotY,
-          Math.min(1, delta * 12),
+          Math.min(1, delta * 10),
         );
       }
     } else if (!isLocal && targetPosition) {
@@ -274,11 +274,13 @@ function ProceduralAvatar({
     rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, 0, delta * 8);
 
     if (anim === "walk") {
-      leftArm.rotation.x = Math.sin(t * 12) * 0.6;
-      rightArm.rotation.x = -Math.sin(t * 12) * 0.6;
-      leftLeg.rotation.x = -Math.sin(t * 12) * 0.7;
-      rightLeg.rotation.x = Math.sin(t * 12) * 0.7;
-      body.position.y = 0.95 + Math.abs(Math.sin(t * 12)) * 0.06;
+      const swing = Math.sin(t * 9);
+      leftArm.rotation.x = swing * 0.45;
+      rightArm.rotation.x = -swing * 0.45;
+      leftLeg.rotation.x = -swing * 0.55;
+      rightLeg.rotation.x = swing * 0.55;
+      body.position.y = 0.95 + Math.abs(Math.sin(t * 9)) * 0.035;
+      head.position.y = 1.75 + Math.abs(Math.sin(t * 9)) * 0.02;
     }
   });
 
