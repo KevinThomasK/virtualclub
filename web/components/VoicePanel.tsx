@@ -38,9 +38,11 @@ export function VoicePanel({
         position: "absolute",
         left: mobile ? 8 : 16,
         ...(mobile
-          ? { top: "max(120px, calc(110px + env(safe-area-inset-top)))", bottom: "auto" }
+          ? { top: "max(56px, calc(50px + env(safe-area-inset-top)))", bottom: "auto" }
           : { bottom: 24 }),
-        width: mobile ? "min(220px, calc(100vw - 140px))" : 250,
+        width: mobile ? "min(200px, calc(100vw - 120px))" : 250,
+        padding: mobile ? "10px 12px" : "14px 16px",
+        fontSize: mobile ? 12 : undefined,
         background: "rgba(6, 24, 20, 0.92)",
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(52, 211, 153, 0.45)",

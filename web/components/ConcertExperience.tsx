@@ -390,27 +390,31 @@ export function ConcertExperience() {
       <div
         style={{
           position: "absolute",
-          top: 90,
+          top: isMobile
+            ? "max(52px, calc(46px + env(safe-area-inset-top)))"
+            : 90,
           left: "50%",
           transform: "translateX(-50%)",
           display: "grid",
-          gap: 8,
+          gap: 6,
           zIndex: 70,
           pointerEvents: "none",
-          width: "min(360px, calc(100vw - 32px))",
+          width: isMobile
+            ? "min(280px, calc(100vw - 24px))"
+            : "min(360px, calc(100vw - 32px))",
         }}
       >
-        {clubToasts.map((toast) => (
+        {clubToasts.slice(0, isMobile ? 2 : 5).map((toast) => (
           <div
             key={toast.id}
             style={{
-              padding: "10px 16px",
+              padding: isMobile ? "7px 12px" : "10px 16px",
               borderRadius: 12,
-              background: "rgba(10, 11, 18, 0.92)",
+              background: "rgba(10, 11, 18, 0.88)",
               border: "1px solid rgba(167, 139, 250, 0.45)",
               color: "#e9d5ff",
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: isMobile ? 11 : 13,
               textAlign: "center",
               boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
             }}

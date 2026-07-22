@@ -88,6 +88,281 @@ export function ConcertHUD({
   }
 
   const zoneAction = activeZone ? getZoneAction(activeZone.id) : null;
+  const [mobileMenu, setMobileMenu] = useState<"none" | "chat" | "react">(
+    "none",
+  );
+
+  // —— Ultra-minimal phone HUD: keep the 3D view open ——
+  if (compact) {
+    return (
+      <>
+        <div
+          style={{
+            position: "absolute",
+            top: "max(6px, env(safe-area-inset-top))",
+            left: 8,
+            right: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            zIndex: 50,
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              pointerEvents: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: "rgba(10, 11, 18, 0.72)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              maxWidth: "58vw",
+              minWidth: 0,
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                flexShrink: 0,
+                borderRadius: "50%",
+                background: connected ? "#10b981" : "#f59e0b",
+              }}
+            />
+            <span
+              style={{
+                color: "#e2e8f0",
+                fontSize: 12,
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {connected ? `${playerCount} online` : "…"}
+              {activeZone ? ` · ${activeZone.label}` : ""}
+            </span>
+          </div>
+
+          <div
+            style={{
+              pointerEvents: "auto",
+              display: "flex",
+              gap: 6,
+              flexShrink: 0,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() =>
+                setMobileMenu((m) => (m === "react" ? "none" : "react"))
+              }
+              style={iconBtnStyle}
+              aria-label="Reactions"
+            >
+              🔥
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setMobileMenu((m) => (m === "chat" ? "none" : "chat"))
+              }
+              style={iconBtnStyle}
+              aria-label="Chat"
+            >
+              💬
+            </button>
+            <button
+              type="button"
+              onClick={onToggleMusic}
+              style={{
+                ...iconBtnStyle,
+                borderColor: musicEnabled
+                  ? "rgba(34, 211, 238, 0.45)"
+                  : "rgba(255,255,255,0.15)",
+              }}
+              aria-label="Music"
+            >
+              {musicEnabled ? "🎧" : "🔇"}
+            </button>
+            <button
+              type="button"
+              onClick={onLeave}
+              style={{
+                ...iconBtnStyle,
+                borderColor: "rgba(239, 68, 68, 0.4)",
+                color: "#fca5a5",
+              }}
+              aria-label="Leave"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Tiny zone tip — one line only */}
+        {activeZone && zoneAction ? (
+          <div
+            style={{
+              position: "absolute",
+              top: "max(48px, calc(42px + env(safe-area-inset-top)))",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 50,
+              pointerEvents: "none",
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: "rgba(10,11,18,0.65)",
+              border: `1px solid ${activeZone.color}66`,
+              color: "#fde68a",
+              fontSize: 11,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              maxWidth: "90vw",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            Tap Interact — {zoneAction.label}
+          </div>
+        ) : null}
+
+        {mobileMenu === "react" ? (
+          <div
+            style={{
+              position: "absolute",
+              top: "max(48px, calc(42px + env(safe-area-inset-top)))",
+              right: 8,
+              zIndex: 60,
+              display: "flex",
+              gap: 4,
+              padding: 6,
+              borderRadius: 14,
+              background: "rgba(10,11,18,0.9)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              pointerEvents: "auto",
+            }}
+          >
+            {REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => {
+                  onReaction(emoji);
+                  setMobileMenu("none");
+                }}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  border: "none",
+                  background: "transparent",
+                  fontSize: 18,
+                  cursor: "pointer",
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {mobileMenu === "chat" ? (
+          <form
+            onSubmit={(e) => {
+              submitChat(e);
+              setMobileMenu("none");
+            }}
+            style={{
+              position: "absolute",
+              top: "max(48px, calc(42px + env(safe-area-inset-top)))",
+              left: 8,
+              right: 8,
+              zIndex: 60,
+              display: "flex",
+              gap: 6,
+              padding: 8,
+              borderRadius: 14,
+              background: "rgba(10,11,18,0.92)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              pointerEvents: "auto",
+            }}
+          >
+            <input
+              value={chatInput}
+              onChange={(event) => setChatInput(event.target.value)}
+              placeholder="Say something…"
+              maxLength={40}
+              autoFocus
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(0,0,0,0.35)",
+                color: "#fff",
+                fontSize: 16,
+                outline: "none",
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                padding: "0 14px",
+                borderRadius: 10,
+                border: "none",
+                background: "#6366f1",
+                color: "#fff",
+                fontWeight: 700,
+              }}
+            >
+              Send
+            </button>
+          </form>
+        ) : null}
+
+        {/* Floating live reactions — smaller, less screen space */}
+        <div
+          style={{
+            position: "absolute",
+            right: 12,
+            bottom: 200,
+            width: 56,
+            height: 160,
+            pointerEvents: "none",
+            zIndex: 40,
+            overflow: "visible",
+          }}
+        >
+          <style>{`
+            @keyframes reactionFloat {
+              0% { transform: translateY(0) scale(0.6); opacity: 0; }
+              12% { transform: translateY(-20px) scale(1.1); opacity: 1; }
+              100% { transform: translateY(-150px) scale(1); opacity: 0; }
+            }
+          `}</style>
+          {reactions.slice(-4).map((reaction) => (
+            <div
+              key={reaction.id}
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: `${(hashCode(reaction.id) % 40)}%`,
+                animation: "reactionFloat 2.2s ease-out forwards",
+                fontSize: 22,
+              }}
+            >
+              {reaction.emoji}
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -581,6 +856,20 @@ function hashCode(value: string) {
   }
   return Math.abs(hash);
 }
+
+const iconBtnStyle: React.CSSProperties = {
+  width: 36,
+  height: 36,
+  borderRadius: 999,
+  border: "1px solid rgba(255,255,255,0.15)",
+  background: "rgba(10, 11, 18, 0.82)",
+  color: "#e2e8f0",
+  fontSize: 14,
+  cursor: "pointer",
+  display: "grid",
+  placeItems: "center",
+  padding: 0,
+};
 
 const actionButtonStyle: React.CSSProperties = {
   display: "inline-flex",

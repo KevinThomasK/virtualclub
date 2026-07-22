@@ -38,7 +38,7 @@ export function MobileControls({
   const setKnob = useCallback((nx: number, ny: number) => {
     const knob = knobRef.current;
     if (!knob) return;
-    const max = 36;
+    const max = 28;
     knob.style.transform = `translate(calc(-50% + ${nx * max}px), calc(-50% + ${ny * max}px))`;
   }, []);
 
@@ -130,13 +130,13 @@ export function MobileControls({
         onPointerCancel={onStickUp}
         style={{
           position: "absolute",
-          left: "max(12px, env(safe-area-inset-left))",
-          bottom: "max(88px, calc(72px + env(safe-area-inset-bottom)))",
-          width: 118,
-          height: 118,
+          left: "max(8px, env(safe-area-inset-left))",
+          bottom: "max(16px, env(safe-area-inset-bottom))",
+          width: 96,
+          height: 96,
           borderRadius: "50%",
-          background: "rgba(10, 11, 18, 0.45)",
-          border: "1px solid rgba(255,255,255,0.18)",
+          background: "rgba(10, 11, 18, 0.28)",
+          border: "1px solid rgba(255,255,255,0.12)",
           pointerEvents: "auto",
           touchAction: "none",
         }}
@@ -147,30 +147,14 @@ export function MobileControls({
             position: "absolute",
             left: "50%",
             top: "50%",
-            width: 46,
-            height: 46,
+            width: 38,
+            height: 38,
             borderRadius: "50%",
-            background: "rgba(129, 140, 248, 0.85)",
-            border: "2px solid rgba(255,255,255,0.35)",
+            background: "rgba(129, 140, 248, 0.75)",
+            border: "2px solid rgba(255,255,255,0.28)",
             transform: "translate(-50%, -50%)",
-            boxShadow: "0 0 16px rgba(99, 102, 241, 0.45)",
           }}
         />
-        <span
-          style={{
-            position: "absolute",
-            bottom: -22,
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            fontSize: 10,
-            color: "rgba(226,232,240,0.7)",
-            fontWeight: 600,
-            letterSpacing: 0.4,
-          }}
-        >
-          MOVE
-        </span>
       </div>
 
       {/* Look pad — right thumb */}
@@ -183,35 +167,26 @@ export function MobileControls({
         onPointerCancel={onLookUp}
         style={{
           position: "absolute",
-          right: "max(12px, env(safe-area-inset-right))",
-          bottom: "max(88px, calc(72px + env(safe-area-inset-bottom)))",
-          width: 118,
-          height: 118,
-          borderRadius: 24,
-          background: "rgba(10, 11, 18, 0.35)",
-          border: "1px dashed rgba(255,255,255,0.2)",
+          right: "max(8px, env(safe-area-inset-right))",
+          bottom: "max(16px, env(safe-area-inset-bottom))",
+          width: 96,
+          height: 96,
+          borderRadius: 22,
+          background: "rgba(10, 11, 18, 0.22)",
+          border: "1px dashed rgba(255,255,255,0.14)",
           pointerEvents: "auto",
           touchAction: "none",
-          display: "grid",
-          placeItems: "center",
-          color: "rgba(226,232,240,0.65)",
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: 0.5,
-          userSelect: "none",
         }}
-      >
-        LOOK
-      </div>
+      />
 
       {/* Action cluster */}
       <div
         style={{
           position: "absolute",
-          right: "max(12px, env(safe-area-inset-right))",
-          bottom: "max(220px, calc(204px + env(safe-area-inset-bottom)))",
+          right: "max(8px, env(safe-area-inset-right))",
+          bottom: "max(124px, calc(112px + env(safe-area-inset-bottom)))",
           display: "grid",
-          gap: 10,
+          gap: 8,
           pointerEvents: "auto",
         }}
       >
@@ -221,7 +196,7 @@ export function MobileControls({
           onClick={onInteract}
         >
           G
-          <span>Interact</span>
+          <span>Go</span>
         </button>
         <button
           type="button"
@@ -229,7 +204,6 @@ export function MobileControls({
           onClick={onDance}
         >
           💃
-          <span>Dance</span>
         </button>
         <button
           type="button"
@@ -237,7 +211,6 @@ export function MobileControls({
           onClick={() => setSprint((v) => !v)}
         >
           ⚡
-          <span>{sprint ? "Sprint On" : "Sprint"}</span>
         </button>
       </div>
     </div>
