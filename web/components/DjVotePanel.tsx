@@ -15,27 +15,29 @@ const STYLES: {
     label: "Bass",
     emoji: "🔊",
     color: "#f472b6",
-    hint: "Heavy low-end drop",
+    hint: "Heavy low-end",
   },
   {
     id: "chill",
     label: "Chill",
     emoji: "🌊",
     color: "#22d3ee",
-    hint: "Laid-back groove",
+    hint: "Laid-back",
   },
   {
     id: "hyper",
     label: "Hyper",
     emoji: "⚡",
     color: "#fbbf24",
-    hint: "Max energy chaos",
+    hint: "Max energy",
   },
 ];
 
 type DjVotePanelProps = {
   visible: boolean;
   votes: DjVotes;
+  myVote: DjStyle | null;
+  playerCount: number;
   djMode: string;
   djModeUntil: number;
   onVote: (style: DjStyle) => void;
@@ -45,6 +47,8 @@ type DjVotePanelProps = {
 export function DjVotePanel({
   visible,
   votes,
+  myVote,
+  playerCount,
   djMode,
   djModeUntil,
   onVote,
@@ -61,6 +65,7 @@ export function DjVotePanel({
 
   const live = Boolean(djMode) && now < djModeUntil;
   const total = votes.bass + votes.chill + votes.hyper;
+  const need = playerCount <= 1 ? 1 : 2;
   const secondsLeft = live
     ? Math.max(0, Math.ceil((djModeUntil - now) / 1000))
     : 0;
@@ -72,8 +77,8 @@ export function DjVotePanel({
         top: 110,
         left: "50%",
         transform: "translateX(-50%)",
-        width: "min(420px, calc(100vw - 32px))",
-        background: "rgba(12, 8, 24, 0.92)",
+        width: "min(440px, calc(100vw - 32px))",
+        background: "rgba(12, 8, 24, 0.94)",
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(244, 114, 182, 0.45)",
         borderRadius: 16,
@@ -81,27 +86,50 @@ export function DjVotePanel({
         zIndex: 55,
         boxShadow: "0 0 28px rgba(236, 72, 153, 0.25)",
         color: "#e2e8f0",
+        pointerEvents: "auto",
       }}
+      onPointerDown={(event) => event.stopPropagation()}
     >
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 10,
+          marginBottom: 8,
+          gap: 8,
         }}
       >
         <div style={{ fontWeight: 800, fontSize: 13, letterSpacing: 0.6 }}>
           🎧 DJ REQUEST QUEUE
         </div>
-        <span style={{ fontSize: 11, color: "#94a3b8" }}>
-          {live
-            ? `${djMode.toUpperCase()} live · ${secondsLeft}s`
-            : total < 2
-              ? "Need 2+ votes"
-              : "Voting…"}
+        <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>
+          {live ? `${djMode.toUpperCase()} · ${secondsLeft}s` : `${total}/${need} votes`}
         </span>
       </div>
+
+      {!live ? (
+        <p
+          style={{
+            margin: "0 0 12px",
+            fontSize: 12,
+            lineHeight: 1.45,
+            color: "#cbd5e1",
+          }}
+        >
+          Tap a style to cast <strong style={{ color: "#fff" }}>your 1 vote</strong>
+          {playerCount <= 1
+            ? " — alone here, one tap starts the drop."
+            : " — when 2 people agree on a style, that drop plays for everyone."}
+          {myVote ? (
+            <>
+              {" "}
+              Your vote:{" "}
+              <strong style={{ color: "#f9a8d4" }}>{myVote.toUpperCase()}</strong>
+              {" "}(tap another to switch).
+            </>
+          ) : null}
+        </p>
+      ) : null}
 
       {live ? (
         <div
@@ -131,34 +159,44 @@ export function DjVotePanel({
         >
           {STYLES.map((style) => {
             const count = votes[style.id];
+            const selected = myVote === style.id;
             return (
               <button
                 key={style.id}
                 type="button"
-                onClick={() => onVote(style.id)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onVote(style.id);
+                }}
                 style={{
                   display: "grid",
                   gap: 4,
-                  padding: "10px 8px",
+                  padding: "12px 8px",
                   borderRadius: 12,
-                  border: `1px solid ${style.color}66`,
-                  background: "rgba(255,255,255,0.04)",
+                  border: selected
+                    ? `2px solid ${style.color}`
+                    : `1px solid ${style.color}55`,
+                  background: selected
+                    ? `${style.color}22`
+                    : "rgba(255,255,255,0.04)",
                   color: "#fff",
                   cursor: "pointer",
                   textAlign: "center",
+                  boxShadow: selected ? `0 0 16px ${style.color}55` : "none",
                 }}
               >
-                <span style={{ fontSize: 20 }}>{style.emoji}</span>
-                <span style={{ fontSize: 12, fontWeight: 700 }}>
+                <span style={{ fontSize: 22 }}>{style.emoji}</span>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>
                   {style.label}
                 </span>
                 <span style={{ fontSize: 10, color: "#94a3b8" }}>
-                  {style.hint}
+                  {selected ? "YOUR VOTE" : style.hint}
                 </span>
                 <span
                   style={{
                     marginTop: 2,
-                    fontSize: 14,
+                    fontSize: 18,
                     fontWeight: 800,
                     color: style.color,
                   }}

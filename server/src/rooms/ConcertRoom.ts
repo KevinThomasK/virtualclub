@@ -26,7 +26,7 @@ const DJ_STYLES = new Set(["bass", "chill", "hyper"]);
 
 const DANCE_FLOOR = { x: 0, z: -2, radius: 7 };
 const PHOTO_WALL = { x: 16, z: 14, radius: 3.8 };
-const DJ_ZONE = { x: 0, z: -14, radius: 5 };
+const DJ_ZONE = { x: 0, z: -14, radius: 8 };
 
 // Voice lounge seats — must match web/lib/clubLayout.ts VOICE_LOUNGE.
 const VOICE_LOUNGE_CENTER = { x: 8, z: 13 };
@@ -253,14 +253,42 @@ export class ConcertRoom extends Room<ConcertState> {
 
     this.onMessage("djVote", (client, message: DjVoteMessage) => {
       const player = this.state.players.get(client.sessionId);
-      if (!player || !DJ_STYLES.has(message.style)) return;
-      if (!inRadius(player, DJ_ZONE)) return;
+      if (!player || !DJ_STYLES.has(message.style)) {
+        client.send("djVoteAck", {
+          ok: false,
+          reason: "invalid",
+        });
+        return;
+      }
 
-      // Can't change the queue while a drop is already playing.
-      if (this.state.djMode && Date.now() < this.state.djModeUntil) return;
+      if (this.state.djMode && Date.now() < this.state.djModeUntil) {
+        client.send("djVoteAck", {
+          ok: false,
+          reason: "drop_live",
+          style: this.state.djMode,
+        });
+        return;
+      }
+
+      if (!inRadius(player, DJ_ZONE)) {
+        client.send("djVoteAck", {
+          ok: false,
+          reason: "too_far",
+        });
+        return;
+      }
 
       this.djVotes.set(client.sessionId, message.style);
       this.recountDjVotes();
+      client.send("djVoteAck", {
+        ok: true,
+        style: message.style,
+        votes: {
+          bass: this.state.votesBass,
+          chill: this.state.votesChill,
+          hyper: this.state.votesHyper,
+        },
+      });
       this.tryResolveDjVote(player.name);
     });
 
@@ -403,7 +431,10 @@ export class ConcertRoom extends Room<ConcertState> {
   private tryResolveDjVote(voterName: string) {
     const { votesBass, votesChill, votesHyper } = this.state;
     const total = votesBass + votesChill + votesHyper;
-    if (total < DJ_VOTE_THRESHOLD) return;
+    // Alone in the club: one click is enough to demo the drop.
+    // With friends: need at least 2 votes and a clear lead.
+    const threshold = this.state.players.size <= 1 ? 1 : DJ_VOTE_THRESHOLD;
+    if (total < threshold) return;
 
     const ranked: Array<{ style: "bass" | "chill" | "hyper"; votes: number }> = [
       { style: "bass" as const, votes: votesBass },
@@ -413,9 +444,8 @@ export class ConcertRoom extends Room<ConcertState> {
 
     const winner = ranked[0];
     const runner = ranked[1];
-    // Need a clear lead (or a solo majority at the threshold).
-    if (winner.votes < DJ_VOTE_THRESHOLD) return;
-    if (winner.votes === runner.votes) return;
+    if (winner.votes < threshold) return;
+    if (this.state.players.size > 1 && winner.votes === runner.votes) return;
 
     const now = Date.now();
     this.state.djMode = winner.style;

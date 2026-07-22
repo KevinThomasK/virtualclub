@@ -24,7 +24,7 @@ export const CONCERT_ZONES: ConcertZone[] = [
     hint: "Vote for Bass / Chill / Hyper drop",
     x: 0,
     z: -14,
-    radius: 4,
+    radius: 6,
     color: "#f472b6",
   },
   {

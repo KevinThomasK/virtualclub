@@ -49,6 +49,7 @@ export function ConcertExperience() {
     djMode,
     djModeUntil,
     djVotes,
+    myDjVote,
     reactions,
     photoFlashes,
     clubToasts,
@@ -265,6 +266,8 @@ export function ConcertExperience() {
       <DjVotePanel
         visible={activeZone?.id === "dj"}
         votes={djVotes}
+        myVote={myDjVote}
+        playerCount={players.length}
         djMode={djMode}
         djModeUntil={djModeUntil}
         onVote={sendDjVote}

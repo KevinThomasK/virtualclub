@@ -141,6 +141,7 @@ export function useConcertRoom(options: JoinOptions | null) {
     chill: 0,
     hyper: 0,
   });
+  const [myDjVote, setMyDjVote] = useState<DjStyle | null>(null);
   const [reactions, setReactions] = useState<ReactionEvent[]>([]);
   const [danceSyncs, setDanceSyncs] = useState<DanceSyncEvent[]>([]);
   const [photoFlashes, setPhotoFlashes] = useState<PhotoFlashEvent[]>([]);
@@ -255,8 +256,33 @@ export function useConcertRoom(options: JoinOptions | null) {
         );
 
         room.onMessage(
+          "djVoteAck",
+          (payload: {
+            ok: boolean;
+            reason?: string;
+            style?: string;
+            votes?: DjVotes;
+          }) => {
+            if (payload.ok && payload.style) {
+              setMyDjVote(payload.style as DjStyle);
+              if (payload.votes) setDjVotes(payload.votes);
+              pushToast(`Voted ${payload.style.toUpperCase()} ✓`);
+              return;
+            }
+            if (payload.reason === "too_far") {
+              pushToast("Move closer to the DJ booth to vote");
+            } else if (payload.reason === "drop_live") {
+              pushToast("A drop is already playing — wait for it to end");
+            } else {
+              pushToast("Couldn’t register that vote — try again");
+            }
+          },
+        );
+
+        room.onMessage(
           "djDrop",
           (payload: { style: string; votes: number; by: string }) => {
+            setMyDjVote(null);
             const label =
               payload.style === "bass"
                 ? "Bass Drop"
@@ -348,6 +374,7 @@ export function useConcertRoom(options: JoinOptions | null) {
       setDjMode("");
       setDjModeUntil(0);
       setDjVotes({ bass: 0, chill: 0, hyper: 0 });
+      setMyDjVote(null);
       setReactions([]);
       setDanceSyncs([]);
       setPhotoFlashes([]);
@@ -436,6 +463,7 @@ export function useConcertRoom(options: JoinOptions | null) {
     djMode,
     djModeUntil,
     djVotes,
+    myDjVote,
     reactions,
     danceSyncs,
     photoFlashes,
