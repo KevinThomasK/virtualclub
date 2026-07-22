@@ -473,6 +473,7 @@ export function ConcertExperience() {
               }}
             >
               <div><strong style={{ color: "#67e8f9" }}>W A S D</strong> — explore the club</div>
+              <div><strong style={{ color: "#fde68a" }}>Shift</strong> — sprint while moving</div>
               <div><strong style={{ color: "#fbbf24" }}>G</strong> — interact in a zone or collect tokens</div>
               <div><strong style={{ color: "#a78bfa" }}>Quests</strong> — track goals in Club Activities (bottom-right)</div>
               <div><strong style={{ color: "#f472b6" }}>Space / E / F / R</strong> — dance, wave, cheer, pose</div>

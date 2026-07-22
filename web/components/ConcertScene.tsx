@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Environment, Text } from "@react-three/drei";
+import { Text, AdaptiveDpr } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
@@ -18,14 +18,15 @@ import type { PhotoFlashEvent } from "@/hooks/useConcertRoom";
 import type { EmoteType, PlayerSnapshot } from "@/lib/types";
 
 const MOVE_SPEED = 5.4;
-const CAMERA_DISTANCE = 6.5;
-const MOUSE_YAW_SENSITIVITY = 0.004;
-const MOUSE_PITCH_SENSITIVITY = 0.003;
+const SPRINT_MULTIPLIER = 1.75;
+const CAMERA_DISTANCE = 6.2;
+const MOUSE_YAW_SENSITIVITY = 0.0045;
+const MOUSE_PITCH_SENSITIVITY = 0.0032;
 const MIN_CAMERA_PITCH = 0.2;
 const MAX_CAMERA_PITCH = 1.15;
-/** Frame-rate independent damping helpers (higher = snappier). */
-const CAMERA_FOLLOW = 14;
-const TURN_SPEED = 16;
+/** Higher = camera sticks closer to the player (less floaty lag). */
+const CAMERA_FOLLOW = 28;
+const TURN_SPEED = 20;
 const MAX_FRAME_DELTA = 0.05;
 
 /** Shortest-arc angle blend — avoids full spins when turning past ±π. */
@@ -70,7 +71,7 @@ type SceneProps = {
 };
 
 function Confetti({ boost }: { boost: boolean }) {
-  const count = boost ? 320 : 160;
+  const count = boost ? 120 : 60;
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const colors = useMemo(
@@ -638,6 +639,7 @@ function LocalController({
       (keys.KeyA || keys.ArrowLeft ? 1 : 0);
 
     let moving = false;
+    const sprinting = !!(keys.ShiftLeft || keys.ShiftRight);
     if (forward !== 0 || strafe !== 0) {
       moving = true;
       const yaw = cameraYawRef.current;
@@ -648,8 +650,9 @@ function LocalController({
       moveDir.addScaledVector(camRight, strafe);
       moveDir.normalize();
 
-      positionRef.current.x += moveDir.x * MOVE_SPEED * delta;
-      positionRef.current.z += moveDir.z * MOVE_SPEED * delta;
+      const speed = MOVE_SPEED * (sprinting ? SPRINT_MULTIPLIER : 1);
+      positionRef.current.x += moveDir.x * speed * delta;
+      positionRef.current.z += moveDir.z * speed * delta;
       // Smooth turn toward move direction — no snap when WASD changes.
       const facing = Math.atan2(moveDir.x, moveDir.z);
       rotationRef.current = lerpAngle(
@@ -728,7 +731,7 @@ function LocalController({
     }
 
     const now = performance.now();
-    if (now - lastSentRef.current > 50) {
+    if (now - lastSentRef.current > 66) {
       lastSentRef.current = now;
       onMove({
         x: positionRef.current.x,
@@ -850,32 +853,31 @@ function SceneContent(props: SceneProps) {
     <>
       <color attach="background" args={["#0c0c18"]} />
       <fog attach="fog" args={["#0c0c18", 28, 75]} />
-      <ambientLight intensity={boosted ? 0.7 : djActive ? 0.58 : 0.5} />
+      <ambientLight intensity={boosted ? 0.85 : djActive ? 0.7 : 0.62} />
       <hemisphereLight
         args={[
           props.djMode === "chill" ? "#a5f3fc" : "#c4b5fd",
           "#1e1b4b",
-          0.55,
+          0.7,
         ]}
       />
       <directionalLight
-        castShadow
-        intensity={props.djMode === "bass" ? 0.7 : 0.85}
+        castShadow={false}
+        intensity={props.djMode === "bass" ? 0.85 : 1}
         position={[0, 16, 8]}
-        shadow-mapSize={[1024, 1024]}
       />
       <pointLight
         position={[0, 6, -10]}
-        intensity={props.djMode === "bass" ? 40 : props.djMode === "hyper" ? 35 : 25}
+        intensity={props.djMode === "bass" ? 32 : props.djMode === "hyper" ? 28 : 20}
         color={djAccent}
         distance={35}
+        decay={2}
       />
-      <pointLight position={[-18, 5, 2]} intensity={18} color="#22d3ee" distance={22} />
-      <pointLight position={[18, 5, -4]} intensity={18} color="#fbbf24" distance={22} />
+      <pointLight position={[-18, 5, 2]} intensity={12} color="#22d3ee" distance={20} decay={2} />
+      <pointLight position={[18, 5, -4]} intensity={12} color="#fbbf24" distance={20} decay={2} />
       {props.djMode === "hyper" ? (
-        <pointLight position={[0, 8, 0]} intensity={28} color="#a78bfa" distance={30} />
+        <pointLight position={[0, 8, 0]} intensity={18} color="#a78bfa" distance={26} decay={2} />
       ) : null}
-      <Environment preset="warehouse" />
 
       <ClubEnvironment
         dropActive={dropActive}
@@ -903,20 +905,21 @@ function SceneContent(props: SceneProps) {
         speakingIds={props.speakingIds}
       />
 
-      <EffectComposer>
+      <AdaptiveDpr pixelated />
+      <EffectComposer multisampling={0}>
         <Bloom
           intensity={
             props.djMode === "bass"
-              ? 0.9
+              ? 0.55
               : props.djMode === "hyper"
-                ? 1.05
-                : 0.65
+                ? 0.65
+                : 0.4
           }
-          luminanceThreshold={0.25}
-          luminanceSmoothing={0.4}
+          luminanceThreshold={0.35}
+          luminanceSmoothing={0.5}
           mipmapBlur
         />
-        <Vignette eskil={false} offset={0.3} darkness={0.35} />
+        <Vignette eskil={false} offset={0.3} darkness={0.3} />
       </EffectComposer>
     </>
   );
@@ -925,16 +928,21 @@ function SceneContent(props: SceneProps) {
 export function ConcertScene(props: SceneProps) {
   return (
     <Canvas
-      shadows
+      shadows={false}
       camera={{ position: [0, 5, 12], fov: 68 }}
-      // Cap pixel ratio: rendering at full retina DPR tanks the framerate on
-      // dense scenes, and 1.5x is visually indistinguishable here.
-      dpr={[1, 1.5]}
-      gl={{ powerPreference: "high-performance" }}
+      // Cap pixel ratio hard — retina at full DPR is the #1 smoothness killer here.
+      dpr={[1, 1.25]}
+      gl={{
+        powerPreference: "high-performance",
+        antialias: false,
+        stencil: false,
+        depth: true,
+      }}
       style={{ width: "100%", height: "100%", cursor: "grab" }}
       onCreated={({ gl }) => {
         gl.domElement.tabIndex = 0;
         gl.domElement.focus();
+        gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
       }}
     >
       <SceneContent {...props} />

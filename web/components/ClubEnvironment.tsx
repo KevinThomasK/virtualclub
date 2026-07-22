@@ -142,13 +142,17 @@ function DanceFloorTiles() {
   );
   const materialRefs = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
 
+  const frameSkip = useRef(0);
   useFrame(({ clock }) => {
+    frameSkip.current += 1;
+    if (frameSkip.current % 2 !== 0) return;
     const t = clock.elapsedTime;
-    tiles.forEach((tile, i) => {
-      const material = materialRefs.current[i];
-      if (!material) return;
-      material.opacity = 0.12 + (Math.sin(t * 2.4 + tile.phase) * 0.5 + 0.5) * 0.3;
-    });
+    const mats = materialRefs.current;
+    for (let i = 0; i < tiles.length; i += 1) {
+      const material = mats[i];
+      if (!material) continue;
+      material.opacity = 0.12 + (Math.sin(t * 2.4 + tiles[i].phase) * 0.5 + 0.5) * 0.3;
+    }
   });
 
   return (
@@ -241,7 +245,7 @@ function DiscoBall({ party }: { party: boolean }) {
         ))}
       </group>
       <pointLight ref={lightRef} intensity={22} distance={28} color="#e0e7ff" />
-      <Sparkles count={party ? 60 : 24} scale={[6, 4, 6]} size={party ? 4 : 2.5} speed={0.5} color="#e0e7ff" />
+      <Sparkles count={party ? 28 : 12} scale={[6, 4, 6]} size={party ? 3 : 2} speed={0.45} color="#e0e7ff" />
     </group>
   );
 }
@@ -622,42 +626,28 @@ function VoiceLoungeDecor() {
 }
 
 function CeilingLights() {
-  const spots = useMemo(
-    () =>
-      [-12, -6, 0, 6, 12].flatMap((x) => [
-        { x, z: -6, i: x + 6 },
-        { x, z: 2, i: x + 20 },
-      ]),
+  // Static point lights — fewer + no per-frame retargeting keeps FPS stable.
+  const lights = useMemo(
+    () => [
+      { x: -8, z: -4, color: "#818cf8" },
+      { x: 8, z: -4, color: "#f472b6" },
+      { x: 0, z: 4, color: "#22d3ee" },
+      { x: -10, z: 8, color: "#a78bfa" },
+      { x: 10, z: 8, color: "#fbbf24" },
+    ],
     [],
   );
-  const spotRefs = useRef<THREE.SpotLight[]>([]);
-
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    spots.forEach((light, i) => {
-      const spot = spotRefs.current[i];
-      if (!spot) return;
-      const swing = Math.sin(t * 0.5 + i) * 3;
-      spot.target.position.set(light.x + swing, 0, light.z);
-      spot.target.updateMatrixWorld();
-      const hue = (t * 0.04 + i * 0.07) % 1;
-      spot.color.setHSL(hue, 0.85, 0.55);
-    });
-  });
 
   return (
     <group>
-      {spots.map((light, i) => (
-        <spotLight
+      {lights.map((light) => (
+        <pointLight
           key={`${light.x}-${light.z}`}
-          ref={(el) => {
-            if (el) spotRefs.current[i] = el;
-          }}
-          position={[light.x, 8.2, light.z]}
-          angle={0.38}
-          penumbra={0.55}
-          intensity={55}
-          distance={32}
+          position={[light.x, 7.2, light.z]}
+          intensity={16}
+          distance={22}
+          color={light.color}
+          decay={2}
         />
       ))}
     </group>
@@ -891,8 +881,6 @@ function FramedPoster({
           {title}
         </Text>
       ) : null}
-      {/* Soft wash light */}
-      <pointLight position={[0, 0, 0.6]} intensity={2.2} color={accent} distance={3.5} />
     </group>
   );
 }
@@ -916,7 +904,6 @@ function NeonWallSign({ face, along, y, label, color, size = 0.28 }: NeonSignSpe
       >
         {label}
       </Text>
-      <pointLight position={[0, 0, 0.5]} intensity={3} color={color} distance={4} />
     </group>
   );
 }
@@ -963,11 +950,10 @@ function WallSconce({ face, along, y, color }: { face: WallFace; along: number; 
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={1.4}
+          emissiveIntensity={1.8}
           toneMapped={false}
         />
       </mesh>
-      <pointLight position={[0, -0.15, 0.4]} intensity={5} color={color} distance={5} />
     </group>
   );
 }
@@ -1226,12 +1212,12 @@ export function ClubEnvironment({
       <DiscoBall party={discoParty} />
       <LaserShow party={discoParty || djMode === "chill"} />
       <Sparkles
-        count={boosted ? 100 : 50}
+        count={boosted ? 40 : 22}
         scale={[width, 6, depth]}
         position={[0, 4, -2]}
-        size={boosted ? 3 : 2}
-        speed={0.35}
-        opacity={0.28}
+        size={boosted ? 2.5 : 1.8}
+        speed={0.3}
+        opacity={0.22}
         color={
           djMode === "chill"
             ? "#67e8f9"

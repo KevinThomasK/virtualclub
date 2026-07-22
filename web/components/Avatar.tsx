@@ -39,13 +39,142 @@ type AvatarProps = {
 function getStyleMaterial(style: AvatarOutfit["style"]) {
   switch (style) {
     case "rave":
-      return { roughness: 0.25, metalness: 0.7 };
+      return { roughness: 0.18, metalness: 0.85 };
+    case "cyber":
+      return { roughness: 0.12, metalness: 0.95 };
     case "elegant":
-      return { roughness: 0.55, metalness: 0.12 };
+      return { roughness: 0.45, metalness: 0.2 };
     case "street":
     default:
-      return { roughness: 0.8, metalness: 0.04 };
+      return { roughness: 0.82, metalness: 0.05 };
   }
+}
+
+const SKIN = "#f2c9a1";
+
+function ShoePair({
+  shoeId,
+  color,
+  accent,
+  legX,
+  isFemale,
+}: {
+  shoeId: string;
+  color: string;
+  accent: string;
+  legX: number;
+  isFemale: boolean;
+}) {
+  const baseW = isFemale ? 0.1 : 0.13;
+
+  const makeShoe = (x: number) => {
+    if (shoeId === "boots") {
+      return (
+        <group key={x} position={[x, 0, 0]}>
+          <mesh castShadow position={[0, 0.2, 0.02]}>
+            <boxGeometry args={[baseW * 1.05, 0.32, 0.2]} />
+            <meshStandardMaterial color={color} roughness={0.45} metalness={0.35} />
+          </mesh>
+          <mesh castShadow position={[0, 0.05, 0.08]}>
+            <boxGeometry args={[baseW * 1.1, 0.08, 0.28]} />
+            <meshStandardMaterial color="#1c1917" roughness={0.5} metalness={0.2} />
+          </mesh>
+        </group>
+      );
+    }
+    if (shoeId === "high-tops") {
+      return (
+        <group key={x} position={[x, 0, 0]}>
+          <mesh castShadow position={[0, 0.14, 0.04]}>
+            <boxGeometry args={[baseW, 0.2, 0.22]} />
+            <meshStandardMaterial color={color} roughness={0.4} metalness={0.15} />
+          </mesh>
+          <mesh position={[0, 0.04, 0.06]}>
+            <boxGeometry args={[baseW * 1.05, 0.05, 0.26]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.18, 0.15]}>
+            <boxGeometry args={[baseW * 0.7, 0.04, 0.04]} />
+            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.6} toneMapped={false} />
+          </mesh>
+        </group>
+      );
+    }
+    if (shoeId === "platforms") {
+      return (
+        <group key={x} position={[x, 0, 0]}>
+          <mesh castShadow position={[0, 0.16, 0.05]}>
+            <boxGeometry args={[baseW * 0.95, 0.1, 0.22]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={0.35}
+              roughness={0.3}
+              metalness={0.4}
+              toneMapped={false}
+            />
+          </mesh>
+          <mesh castShadow position={[0, 0.06, 0.04]}>
+            <boxGeometry args={[baseW * 1.05, 0.12, 0.24]} />
+            <meshStandardMaterial color="#1e1b4b" roughness={0.4} metalness={0.3} />
+          </mesh>
+        </group>
+      );
+    }
+    if (shoeId === "sliders") {
+      return (
+        <group key={x} position={[x, 0, 0]}>
+          <mesh castShadow position={[0, 0.04, 0.06]}>
+            <boxGeometry args={[baseW * 1.05, 0.04, 0.24]} />
+            <meshStandardMaterial color={color} roughness={0.55} metalness={0.1} />
+          </mesh>
+          <mesh position={[0, 0.08, 0.02]} rotation={[0.35, 0, 0]}>
+            <boxGeometry args={[baseW * 0.85, 0.03, 0.1]} />
+            <meshStandardMaterial color={accent} roughness={0.4} />
+          </mesh>
+        </group>
+      );
+    }
+    if (shoeId === "glow-runners") {
+      return (
+        <group key={x} position={[x, 0, 0]}>
+          <mesh castShadow position={[0, 0.1, 0.05]}>
+            <boxGeometry args={[baseW, 0.1, 0.24]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.5} />
+          </mesh>
+          <mesh position={[0, 0.04, 0.05]}>
+            <boxGeometry args={[baseW * 1.08, 0.05, 0.26]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={accent}
+              emissiveIntensity={2}
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
+      );
+    }
+    // sneakers (default)
+    return (
+      <group key={x} position={[x, 0, 0]}>
+        <mesh castShadow position={[0, 0.09, 0.05]}>
+          <boxGeometry args={[baseW, 0.09, 0.23]} />
+          <meshStandardMaterial color={color} roughness={0.45} metalness={0.15} />
+        </mesh>
+        <mesh position={[0, 0.04, 0.05]}>
+          <boxGeometry args={[baseW * 1.06, 0.04, 0.25]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.5} />
+        </mesh>
+      </group>
+    );
+  };
+
+  return (
+    <>
+      {makeShoe(-legX)}
+      {makeShoe(legX)}
+    </>
+  );
 }
 
 function ProceduralAvatar({
@@ -86,29 +215,55 @@ function ProceduralAvatar({
   const isDress = outfit.shirt === "glitter-dress";
   const isCropTop = outfit.shirt === "crop-top";
   const isBomber = outfit.shirt === "bomber";
+  const isJacket = outfit.shirt === "neon-jacket";
+  const isHoodie = outfit.shirt === "hoodie";
+  const isMeshTank = outfit.shirt === "mesh-tank";
   const isRave = outfit.style === "rave";
   const isCyber = outfit.style === "cyber";
   const isElegant = outfit.style === "elegant";
+  const isStreet = outfit.style === "street";
   const isFemale = outfit.gender === "female";
-  const showHalo = outfit.style !== "street";
+  const showHalo = isCyber || isRave || isElegant;
   const raveStyle = isRave || isCyber || glowBoost;
   const techHead = isRave || isCyber;
+  const sleeveless = isMeshTank || isCropTop;
   const legColor = isDress ? colors.shirt : colors.pants;
+
+  const isShorts = outfit.pants === "shorts";
+  const isSkinny = outfit.pants === "skinny";
+  const isWideLeg = outfit.pants === "wide-leg";
+  const isCargo = outfit.pants === "cargo";
+  const isLeather = outfit.pants === "leather";
+  const isJoggers = outfit.pants === "joggers";
 
   // Body proportions per gender: male reads broad-shouldered and blocky,
   // female reads slimmer with narrower shoulders and wider hips.
   const shoulderX = isFemale ? 0.31 : 0.38;
-  const shoulderRadius = isFemale ? 0.075 : 0.1;
+  const shoulderRadius = isFemale
+    ? isJacket || isHoodie
+      ? 0.1
+      : 0.075
+    : isJacket || isHoodie
+      ? 0.13
+      : 0.1;
   const armRadius = isFemale ? 0.062 : 0.08;
-  const legRadius = isFemale ? 0.06 : 0.078;
-  const legX = isFemale ? 0.13 : 0.18;
-  const torsoRadius = (isBomber ? 0.34 : 0.3) * (isFemale ? 0.78 : 1.08);
+  const legRadius =
+    (isSkinny ? 0.048 : isWideLeg ? 0.1 : isCargo ? 0.085 : 0.07) *
+    (isFemale ? 0.9 : 1.05);
+  const legX = isWideLeg ? (isFemale ? 0.16 : 0.2) : isFemale ? 0.13 : 0.18;
+  const torsoRadius =
+    (isJacket || isHoodie ? 0.36 : isBomber ? 0.34 : isMeshTank ? 0.26 : 0.3) *
+    (isFemale ? 0.78 : 1.08);
   const bodyScale = isFemale ? 0.96 : 1.04;
 
-  // Dress hem sits low enough to cover the upper legs entirely — only
-  // ankles/shoes peek out, so there's no "robot legs through the skirt" look.
+  // Dress / shorts change how much leg shows.
   const legLength = isDress ? 0.16 : 0.45;
   const legY = isDress ? 0.24 : 0.4;
+  const pantsMetal = isLeather ? 0.75 : material.metalness * 0.6;
+  const pantsRough = isLeather ? 0.18 : isJoggers ? 0.9 : material.roughness;
+  const armClothColor = sleeveless ? SKIN : colors.shirt;
+  // Shorts use skin-colored full legs + a short overlay so walk anim still works.
+  const animatedLegColor = isShorts && !isDress ? SKIN : legColor;
 
   const scratchTarget = useMemo(() => new THREE.Vector3(), []);
 
@@ -118,26 +273,20 @@ function ProceduralAvatar({
 
     if (!isLocal && liveTarget) {
       scratchTarget.set(liveTarget.x, liveTarget.y, liveTarget.z);
-      // Teleports (e.g. sitting on a stool) snap; normal movement lerps.
+      // Teleports (e.g. sitting on a stool) snap; normal movement damps smoothly.
       if (group.position.distanceToSquared(scratchTarget) > 64) {
         group.position.copy(scratchTarget);
         group.rotation.y = liveTarget.rotY;
       } else {
-      group.position.lerp(scratchTarget, Math.min(1, delta * 10));
-        group.rotation.y = lerpAngle(
-          group.rotation.y,
-          liveTarget.rotY,
-          Math.min(1, delta * 10),
-        );
+        const blend = 1 - Math.exp(-18 * delta);
+        group.position.lerp(scratchTarget, blend);
+        group.rotation.y = lerpAngle(group.rotation.y, liveTarget.rotY, blend);
       }
     } else if (!isLocal && targetPosition) {
-      group.position.lerp(targetPosition, Math.min(1, delta * 12));
+      const blend = 1 - Math.exp(-18 * delta);
+      group.position.lerp(targetPosition, blend);
       if (targetRotationY !== undefined) {
-        group.rotation.y = lerpAngle(
-          group.rotation.y,
-          targetRotationY,
-          Math.min(1, delta * 12),
-        );
+        group.rotation.y = lerpAngle(group.rotation.y, targetRotationY, blend);
       }
     } else if (!isLocal) {
       group.position.set(position[0], position[1], position[2]);
@@ -313,62 +462,122 @@ function ProceduralAvatar({
       </group>
 
       <Sparkles
-        count={raveStyle ? 28 : 15}
+        count={isLocal ? (isRave ? 22 : isCyber ? 14 : 8) : 0}
         scale={[1.2, preview ? 1.5 : 2, 1.2]}
         position={[0, preview ? 0.95 : 1, 0]}
-        size={isLocal ? 3 : 1.5}
-        speed={raveStyle ? 0.8 : 0.4}
-        color={colors.accent}
+        size={isLocal ? 2.5 : 1}
+        speed={isRave ? 0.9 : 0.4}
+        color={isElegant ? "#e9d5ff" : colors.accent}
       />
 
       {showHalo ? (
         <mesh ref={haloRef} position={[0, preview ? 2.05 : 2.2, 0]}>
-          <torusGeometry args={[0.22, 0.02, 16, 32]} />
+          <torusGeometry args={[isElegant ? 0.18 : 0.22, isElegant ? 0.012 : 0.02, 16, 32]} />
           <meshStandardMaterial
-            color={colors.accent}
-            emissive={colors.accent}
-            emissiveIntensity={isElegant ? 1.2 : 2}
+            color={isElegant ? "#e9d5ff" : colors.accent}
+            emissive={isElegant ? "#c4b5fd" : colors.accent}
+            emissiveIntensity={isElegant ? 0.9 : 2}
             toneMapped={false}
           />
         </mesh>
       ) : null}
 
-      {/* Legs — shortened and tucked under a dress hem instead of poking through it */}
+      {/* Legs — silhouette changes with pants style */}
       <mesh ref={leftLegRef} castShadow position={[-legX, legY, 0]}>
         <capsuleGeometry args={[legRadius, legLength, 8, 16]} />
-        <meshStandardMaterial color={legColor} roughness={material.roughness} metalness={material.metalness * 0.6} />
+        <meshStandardMaterial
+          color={animatedLegColor}
+          roughness={isShorts ? 0.75 : pantsRough}
+          metalness={isShorts ? 0 : pantsMetal}
+        />
       </mesh>
       <mesh ref={rightLegRef} castShadow position={[legX, legY, 0]}>
         <capsuleGeometry args={[legRadius, legLength, 8, 16]} />
-        <meshStandardMaterial color={legColor} roughness={material.roughness} metalness={material.metalness * 0.6} />
-      </mesh>
-
-      <mesh castShadow position={[-legX, 0.08, 0.05]}>
-        <boxGeometry args={[isFemale ? 0.1 : 0.13, 0.08, isFemale ? 0.2 : 0.23]} />
         <meshStandardMaterial
-          color={colors.shoes}
-          emissive={outfit.shoes === "glow-runners" ? colors.accent : "#000000"}
-          emissiveIntensity={outfit.shoes === "glow-runners" ? 1.5 : 0}
-          roughness={0.35}
-          metalness={0.4}
-        />
-      </mesh>
-      <mesh castShadow position={[legX, 0.08, 0.05]}>
-        <boxGeometry args={[isFemale ? 0.1 : 0.13, 0.08, isFemale ? 0.2 : 0.23]} />
-        <meshStandardMaterial
-          color={colors.shoes}
-          emissive={outfit.shoes === "glow-runners" ? colors.accent : "#000000"}
-          emissiveIntensity={outfit.shoes === "glow-runners" ? 1.5 : 0}
-          roughness={0.35}
-          metalness={0.4}
+          color={animatedLegColor}
+          roughness={isShorts ? 0.75 : pantsRough}
+          metalness={isShorts ? 0 : pantsMetal}
         />
       </mesh>
 
-      {/* Body — the shape itself now depends on the outfit, not just an add-on */}
+      {/* Shorts overlay on thighs */}
+      {isShorts && !isDress ? (
+        <>
+          <mesh position={[-legX, 0.62, 0]}>
+            <capsuleGeometry args={[legRadius * 1.15, 0.18, 6, 12]} />
+            <meshStandardMaterial color={colors.pants} roughness={0.55} metalness={0.2} />
+          </mesh>
+          <mesh position={[legX, 0.62, 0]}>
+            <capsuleGeometry args={[legRadius * 1.15, 0.18, 6, 12]} />
+            <meshStandardMaterial color={colors.pants} roughness={0.55} metalness={0.2} />
+          </mesh>
+        </>
+      ) : null}
+
+      {/* Cargo pockets */}
+      {isCargo && !isDress ? (
+        <>
+          <mesh position={[-legX - 0.06, 0.55, 0.06]}>
+            <boxGeometry args={[0.08, 0.12, 0.06]} />
+            <meshStandardMaterial color={colors.pants} roughness={0.85} />
+          </mesh>
+          <mesh position={[legX + 0.06, 0.55, 0.06]}>
+            <boxGeometry args={[0.08, 0.12, 0.06]} />
+            <meshStandardMaterial color={colors.pants} roughness={0.85} />
+          </mesh>
+        </>
+      ) : null}
+
+      {/* Jogger ankle cuffs */}
+      {isJoggers && !isDress ? (
+        <>
+          <mesh position={[-legX, 0.16, 0]}>
+            <torusGeometry args={[legRadius * 1.15, 0.025, 8, 16]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.7} />
+          </mesh>
+          <mesh position={[legX, 0.16, 0]}>
+            <torusGeometry args={[legRadius * 1.15, 0.025, 8, 16]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.7} />
+          </mesh>
+        </>
+      ) : null}
+
+      {/* Leather side stripe */}
+      {isLeather && !isDress ? (
+        <>
+          <mesh position={[-legX - legRadius * 0.9, 0.45, 0]}>
+            <boxGeometry args={[0.02, 0.5, 0.02]} />
+            <meshStandardMaterial
+              color={colors.accent}
+              emissive={colors.accent}
+              emissiveIntensity={0.8}
+              toneMapped={false}
+            />
+          </mesh>
+          <mesh position={[legX + legRadius * 0.9, 0.45, 0]}>
+            <boxGeometry args={[0.02, 0.5, 0.02]} />
+            <meshStandardMaterial
+              color={colors.accent}
+              emissive={colors.accent}
+              emissiveIntensity={0.8}
+              toneMapped={false}
+            />
+          </mesh>
+        </>
+      ) : null}
+
+      <ShoePair
+        shoeId={outfit.shoes}
+        color={colors.shoes}
+        accent={colors.accent}
+        legX={legX}
+        isFemale={isFemale}
+      />
+
+      {/* Body — silhouette driven by top choice */}
       <group ref={bodyRef} position={[0, 0.95, 0]}>
         {isDress ? (
           <>
-            {/* fitted bodice, sized to the torso — no oversized ball poking above the skirt */}
             <mesh castShadow position={[0, 0.18, 0]}>
               <capsuleGeometry args={[0.22, 0.28, 12, 24]} />
               <meshStandardMaterial
@@ -377,18 +586,27 @@ function ProceduralAvatar({
                 roughness={material.roughness}
                 metalness={material.metalness}
                 emissive={baseColor}
-                emissiveIntensity={isRave ? 0.5 : 0.15}
+                emissiveIntensity={isRave ? 0.65 : 0.25}
               />
             </mesh>
-            {/* skirt flares from the waist and its hem covers the legs down to the ankle */}
             <mesh castShadow position={[0, -0.42, 0]}>
-              <coneGeometry args={[0.4, 0.65, 24]} />
+              <coneGeometry args={[0.42, 0.65, 24]} />
               <meshStandardMaterial
                 color={colors.shirt}
                 emissive={colors.accent}
-                emissiveIntensity={0.15}
-                roughness={material.roughness}
-                metalness={material.metalness * 0.5}
+                emissiveIntensity={0.25}
+                roughness={0.25}
+                metalness={0.55}
+              />
+            </mesh>
+            {/* Glitter sparkle band on hem */}
+            <mesh position={[0, -0.7, 0]}>
+              <torusGeometry args={[0.38, 0.03, 8, 24]} />
+              <meshStandardMaterial
+                color={colors.accent}
+                emissive={colors.accent}
+                emissiveIntensity={1.4}
+                toneMapped={false}
               />
             </mesh>
           </>
@@ -396,42 +614,158 @@ function ProceduralAvatar({
           <>
             <mesh castShadow position={[0, isCropTop ? 0.22 : 0, 0]}>
               <capsuleGeometry
-                args={[torsoRadius, (isCropTop ? 0.32 : 0.7) * bodyScale, 12, 24]}
+                args={[torsoRadius, (isCropTop ? 0.28 : isMeshTank ? 0.55 : 0.7) * bodyScale, 12, 24]}
               />
               <meshStandardMaterial
                 ref={glowMatRef}
                 color={colors.shirt}
-                roughness={material.roughness}
-                metalness={material.metalness}
+                roughness={isMeshTank ? 0.35 : material.roughness}
+                metalness={isMeshTank ? 0.55 : material.metalness}
                 emissive={baseColor}
-                emissiveIntensity={isRave ? 0.55 : 0.15}
+                emissiveIntensity={isRave ? 0.55 : isMeshTank ? 0.3 : 0.12}
               />
             </mesh>
+
+            {/* Crop midriff skin */}
+            {isCropTop ? (
+              <mesh castShadow position={[0, -0.18, 0]}>
+                <capsuleGeometry args={[torsoRadius * 0.85, 0.22, 8, 16]} />
+                <meshStandardMaterial color={SKIN} roughness={0.75} />
+              </mesh>
+            ) : null}
+
+            {/* Neon jacket: collar + zipper + shoulder pads */}
+            {isJacket ? (
+              <>
+                <mesh position={[0, 0.38, 0.05]}>
+                  <boxGeometry args={[0.28, 0.1, 0.22]} />
+                  <meshStandardMaterial color={colors.shirt} roughness={0.4} metalness={0.3} />
+                </mesh>
+                <mesh position={[0, 0.05, 0.28]}>
+                  <boxGeometry args={[0.04, 0.55, 0.03]} />
+                  <meshStandardMaterial
+                    color={colors.accent}
+                    emissive={colors.accent}
+                    emissiveIntensity={1.6}
+                    toneMapped={false}
+                  />
+                </mesh>
+                <mesh position={[-0.28, 0.28, 0]}>
+                  <sphereGeometry args={[0.12, 12, 12]} />
+                  <meshStandardMaterial color={colors.shirt} roughness={0.45} metalness={0.25} />
+                </mesh>
+                <mesh position={[0.28, 0.28, 0]}>
+                  <sphereGeometry args={[0.12, 12, 12]} />
+                  <meshStandardMaterial color={colors.shirt} roughness={0.45} metalness={0.25} />
+                </mesh>
+              </>
+            ) : null}
+
+            {/* Bomber: ribbed hem + stripe */}
+            {isBomber ? (
+              <>
+                <mesh position={[0, -0.38, 0]}>
+                  <torusGeometry args={[torsoRadius * 0.95, 0.04, 8, 24]} />
+                  <meshStandardMaterial color="#0f172a" roughness={0.7} />
+                </mesh>
+                <mesh position={[0.22, 0.05, 0.2]} rotation={[0, 0, 0.4]}>
+                  <boxGeometry args={[0.08, 0.45, 0.03]} />
+                  <meshStandardMaterial
+                    color={colors.accent}
+                    emissive={colors.accent}
+                    emissiveIntensity={1}
+                    toneMapped={false}
+                  />
+                </mesh>
+              </>
+            ) : null}
+
+            {/* Mesh tank: horizontal straps */}
+            {isMeshTank ? (
+              <>
+                {[-0.08, 0.08, 0.24].map((yy) => (
+                  <mesh key={yy} position={[0, yy, 0.22]}>
+                    <boxGeometry args={[torsoRadius * 1.6, 0.03, 0.04]} />
+                    <meshStandardMaterial
+                      color={colors.accent}
+                      emissive={colors.accent}
+                      emissiveIntensity={0.9}
+                      toneMapped={false}
+                    />
+                  </mesh>
+                ))}
+              </>
+            ) : null}
+
+            {/* Hoodie: hood + front pocket */}
+            {isHoodie ? (
+              <>
+                <mesh position={[0, 0.42, -0.08]} rotation={[-0.5, 0, 0]}>
+                  <sphereGeometry args={[0.22, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.6]} />
+                  <meshStandardMaterial color={colors.shirt} roughness={0.85} metalness={0.05} />
+                </mesh>
+                <mesh position={[0, -0.12, 0.26]}>
+                  <boxGeometry args={[0.28, 0.18, 0.08]} />
+                  <meshStandardMaterial color={colors.shirt} roughness={0.8} />
+                </mesh>
+                <mesh position={[0, 0.05, 0.28]}>
+                  <boxGeometry args={[0.06, 0.08, 0.04]} />
+                  <meshStandardMaterial color="#0f172a" roughness={0.6} />
+                </mesh>
+              </>
+            ) : null}
+
             {isFemale ? (
-              // Hip flare gives the female silhouette an hourglass read.
               <mesh castShadow position={[0, -0.34, 0]}>
                 <sphereGeometry args={[0.27, 16, 16]} />
                 <meshStandardMaterial
-                  color={colors.pants}
-                  roughness={material.roughness}
-                  metalness={material.metalness * 0.6}
+                  color={isCropTop || isShorts ? colors.pants : colors.pants}
+                  roughness={pantsRough}
+                  metalness={pantsMetal}
                 />
               </mesh>
             ) : null}
           </>
         )}
-        {/* crop-top ends above the waist on purpose — the bare gap before the
-            legs start is the look, so no extra geometry is added there. */}
 
-        <mesh position={[0, 0.1, 0.22]}>
-          <sphereGeometry args={[0.1, 16, 16]} />
+        {/* Chest badge / style accent */}
+        <mesh position={[0, isCropTop ? 0.28 : 0.1, torsoRadius + 0.02]}>
+          <sphereGeometry args={[isElegant ? 0.07 : 0.1, 16, 16]} />
           <meshStandardMaterial
             color={neonAccent}
             emissive={colors.accent}
-            emissiveIntensity={3}
+            emissiveIntensity={isRave ? 3.2 : isStreet ? 1.2 : 2.2}
             toneMapped={false}
           />
         </mesh>
+
+        {/* Rave glow belts */}
+        {isRave ? (
+          <mesh position={[0, -0.2, 0]}>
+            <torusGeometry args={[torsoRadius * 1.05, 0.035, 8, 24]} />
+            <meshStandardMaterial
+              color={colors.accent}
+              emissive={colors.accent}
+              emissiveIntensity={2}
+              toneMapped={false}
+            />
+          </mesh>
+        ) : null}
+
+        {/* Elegant necklace */}
+        {isElegant ? (
+          <mesh position={[0, 0.32, 0.05]} rotation={[0.4, 0, 0]}>
+            <torusGeometry args={[0.14, 0.012, 8, 24]} />
+            <meshStandardMaterial
+              color="#e9d5ff"
+              emissive="#c4b5fd"
+              emissiveIntensity={0.8}
+              metalness={0.8}
+              roughness={0.2}
+              toneMapped={false}
+            />
+          </mesh>
+        ) : null}
       </group>
 
       {/* Head — only the rave style gets the full cyber helmet; other styles get a plain head + hair */}
@@ -532,51 +866,107 @@ function ProceduralAvatar({
               </>
             ) : null}
             {outfit.style === "street" ? (
-              <mesh position={[0, 0.01, 0.19]}>
-                <boxGeometry args={[0.3, 0.07, 0.03]} />
-                <meshStandardMaterial color="#111318" roughness={0.2} metalness={0.3} />
-              </mesh>
+              <>
+                {/* Cap brim */}
+                <mesh position={[0, 0.16, 0.08]} rotation={[-0.35, 0, 0]}>
+                  <cylinderGeometry args={[0.28, 0.28, 0.08, 24]} />
+                  <meshStandardMaterial color="#111318" roughness={0.55} metalness={0.1} />
+                </mesh>
+                <mesh position={[0, 0.12, 0.28]} rotation={[-0.15, 0, 0]}>
+                  <boxGeometry args={[0.28, 0.03, 0.16]} />
+                  <meshStandardMaterial color="#111318" roughness={0.5} />
+                </mesh>
+                {/* Sunglasses */}
+                <mesh position={[0, 0.01, 0.2]}>
+                  <boxGeometry args={[0.32, 0.08, 0.04]} />
+                  <meshStandardMaterial color="#0a0a0a" roughness={0.15} metalness={0.6} />
+                </mesh>
+              </>
+            ) : null}
+            {isElegant ? (
+              <>
+                <mesh position={[-0.24, -0.02, 0.04]}>
+                  <sphereGeometry args={[0.035, 12, 12]} />
+                  <meshStandardMaterial
+                    color="#e9d5ff"
+                    emissive="#c4b5fd"
+                    emissiveIntensity={1}
+                    metalness={0.9}
+                    roughness={0.15}
+                    toneMapped={false}
+                  />
+                </mesh>
+                <mesh position={[0.24, -0.02, 0.04]}>
+                  <sphereGeometry args={[0.035, 12, 12]} />
+                  <meshStandardMaterial
+                    color="#e9d5ff"
+                    emissive="#c4b5fd"
+                    emissiveIntensity={1}
+                    metalness={0.9}
+                    roughness={0.15}
+                    toneMapped={false}
+                  />
+                </mesh>
+              </>
             ) : null}
           </>
         )}
       </group>
 
-      {/* Arms — pulled in closer to the torso and given a shoulder joint so they read as attached */}
+      {/* Arms — sleeveless tops show skin; jackets get bulkier sleeves */}
       <group ref={leftArmRef} position={[-shoulderX, 1.2, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[shoulderRadius, 16, 16]} />
-          <meshStandardMaterial color={colors.shirt} roughness={material.roughness} metalness={material.metalness} />
+          <meshStandardMaterial
+            color={sleeveless ? SKIN : colors.shirt}
+            roughness={material.roughness}
+            metalness={material.metalness}
+          />
         </mesh>
         <mesh castShadow position={[0, -0.2, 0]}>
-          <capsuleGeometry args={[armRadius, 0.32, 8, 16]} />
+          <capsuleGeometry args={[armRadius * (isJacket || isHoodie ? 1.2 : 1), 0.32, 8, 16]} />
           <meshStandardMaterial
-            color={isRave ? "#1a1c23" : colors.shirt}
+            color={sleeveless ? SKIN : isRave && !sleeveless ? "#1a1c23" : armClothColor}
             roughness={material.roughness}
             metalness={isRave || isCyber ? 0.6 : material.metalness}
           />
         </mesh>
         <mesh position={[0, -0.42, 0]}>
           <sphereGeometry args={[0.065, 16, 16]} />
-          <meshStandardMaterial color={colors.accent} emissive={colors.accent} emissiveIntensity={isRave || isCyber ? 1.5 : 0.4} toneMapped={false} />
+          <meshStandardMaterial
+            color={colors.accent}
+            emissive={colors.accent}
+            emissiveIntensity={isRave || isCyber ? 1.5 : 0.4}
+            toneMapped={false}
+          />
         </mesh>
       </group>
 
       <group ref={rightArmRef} position={[shoulderX, 1.2, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[shoulderRadius, 16, 16]} />
-          <meshStandardMaterial color={colors.shirt} roughness={material.roughness} metalness={material.metalness} />
+          <meshStandardMaterial
+            color={sleeveless ? SKIN : colors.shirt}
+            roughness={material.roughness}
+            metalness={material.metalness}
+          />
         </mesh>
         <mesh castShadow position={[0, -0.2, 0]}>
-          <capsuleGeometry args={[armRadius, 0.32, 8, 16]} />
+          <capsuleGeometry args={[armRadius * (isJacket || isHoodie ? 1.2 : 1), 0.32, 8, 16]} />
           <meshStandardMaterial
-            color={isRave ? "#1a1c23" : colors.shirt}
+            color={sleeveless ? SKIN : isRave && !sleeveless ? "#1a1c23" : armClothColor}
             roughness={material.roughness}
             metalness={isRave || isCyber ? 0.6 : material.metalness}
           />
         </mesh>
         <mesh position={[0, -0.42, 0]}>
           <sphereGeometry args={[0.065, 16, 16]} />
-          <meshStandardMaterial color={colors.accent} emissive={colors.accent} emissiveIntensity={isRave || isCyber ? 1.5 : 0.4} toneMapped={false} />
+          <meshStandardMaterial
+            color={colors.accent}
+            emissive={colors.accent}
+            emissiveIntensity={isRave || isCyber ? 1.5 : 0.4}
+            toneMapped={false}
+          />
         </mesh>
         {anim === "chill" ? (
           <group position={[0.02, -0.52, 0.06]} rotation={[0.4, 0, 0.2]}>
@@ -604,7 +994,7 @@ function ProceduralAvatar({
                 toneMapped={false}
               />
             </mesh>
-            <pointLight position={[0, 0.05, 0]} intensity={4} color="#67e8f9" distance={2.2} />
+            <pointLight position={[0, 0.05, 0]} intensity={2} color="#67e8f9" distance={1.6} />
           </group>
         ) : null}
       </group>
