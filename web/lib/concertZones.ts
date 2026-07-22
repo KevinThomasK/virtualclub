@@ -60,7 +60,7 @@ export const CONCERT_ZONES: ConcertZone[] = [
     hint: "Press G to snap a photo everyone sees",
     x: 16,
     z: 14,
-    radius: 3.5,
+    radius: 5,
     color: "#fb7185",
   },
   {

@@ -184,9 +184,11 @@ function ProceduralAvatar({
     }
 
     if (anim === "sit" || anim === "chill") {
-      // Seated: body lowered, legs folded. Chill adds a sip-drink arm loop.
-      body.position.y = THREE.MathUtils.lerp(body.position.y, 0.62, blend);
-      head.position.y = THREE.MathUtils.lerp(head.position.y, 1.42, blend);
+      // Seated: body lowered onto furniture. Chill adds a sip-drink arm loop.
+      const hipY = anim === "chill" ? 0.78 : 0.62;
+      const headY = anim === "chill" ? 1.55 : 1.42;
+      body.position.y = THREE.MathUtils.lerp(body.position.y, hipY, blend);
+      head.position.y = THREE.MathUtils.lerp(head.position.y, headY, blend);
       leftLeg.rotation.x = THREE.MathUtils.lerp(leftLeg.rotation.x, -1.35, blend);
       rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, -1.35, blend);
       leftArm.rotation.x = THREE.MathUtils.lerp(leftArm.rotation.x, -0.35, blend);
@@ -579,29 +581,30 @@ function ProceduralAvatar({
         {anim === "chill" ? (
           <group position={[0.02, -0.52, 0.06]} rotation={[0.4, 0, 0.2]}>
             <mesh>
-              <cylinderGeometry args={[0.045, 0.035, 0.12, 12]} />
+              <cylinderGeometry args={[0.06, 0.045, 0.16, 12]} />
               <meshStandardMaterial
                 color="#67e8f9"
                 emissive="#22d3ee"
-                emissiveIntensity={1.4}
+                emissiveIntensity={2.2}
                 transparent
-                opacity={0.85}
+                opacity={0.9}
                 toneMapped={false}
               />
             </mesh>
-            <mesh position={[0, 0.08, 0]}>
-              <cylinderGeometry args={[0.012, 0.012, 0.08, 8]} />
+            <mesh position={[0, 0.1, 0]}>
+              <cylinderGeometry args={[0.014, 0.014, 0.09, 8]} />
               <meshStandardMaterial color="#e2e8f0" metalness={0.7} roughness={0.3} />
             </mesh>
-            <mesh position={[0, -0.04, 0]}>
-              <sphereGeometry args={[0.03, 10, 10]} />
+            <mesh position={[0, -0.05, 0]}>
+              <sphereGeometry args={[0.04, 10, 10]} />
               <meshStandardMaterial
                 color="#a78bfa"
                 emissive="#a78bfa"
-                emissiveIntensity={0.8}
+                emissiveIntensity={1.2}
                 toneMapped={false}
               />
             </mesh>
+            <pointLight position={[0, 0.05, 0]} intensity={4} color="#67e8f9" distance={2.2} />
           </group>
         ) : null}
       </group>

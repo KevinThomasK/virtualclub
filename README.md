@@ -69,12 +69,22 @@ so it runs on Render (free plan supports WebSockets).
 
 ### 1. Game server → Render
 
-1. Push this repo to GitHub.
-2. On [render.com](https://render.com): **New → Blueprint**, pick the repo —
-   it reads `render.yaml` and creates the `pulse-club-server` web service
-   automatically. (Or create a **Web Service** manually with
-   build `npm install && npm run build -w server` and start `npm start -w server`.)
-3. After deploy, note the URL, e.g. `https://pulse-club-server.onrender.com`.
+Render must run **only** the Colyseus server — not the Next.js app.
+
+In the Render dashboard for your service (`virtualclub`), set:
+
+| Setting | Value |
+|--------|--------|
+| **Build Command** | `npm install && npm run build -w server` |
+| **Start Command** | `npm start -w server` |
+
+Do **not** use `npm run dev` — that starts both web + server and causes
+`EADDRINUSE` on Render’s port.
+
+After deploy, open `https://virtualclub.onrender.com/health` — you should see
+`{"ok":true}`.
+
+(Or use the Blueprint in `render.yaml`, which already has the correct commands.)
 
 ### 2. Web app → Vercel
 
@@ -83,7 +93,8 @@ so it runs on Render (free plan supports WebSockets).
    needed for npm workspaces).
 3. Add environment variables:
    - `NEXTAUTH_SECRET` — generate with `openssl rand -base64 32`
-   - `NEXT_PUBLIC_COLYSEUS_URL` — `wss://pulse-club-server.onrender.com`
+   - `NEXTAUTH_URL` — your Vercel URL, e.g. `https://your-app.vercel.app`
+   - `NEXT_PUBLIC_COLYSEUS_URL` — `wss://virtualclub.onrender.com`
      (**wss://**, not ws:// — the page is HTTPS)
 4. Deploy. Mic access for the Voice Lounge works because Vercel serves HTTPS.
 

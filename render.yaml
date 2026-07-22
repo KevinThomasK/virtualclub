@@ -1,13 +1,17 @@
 services:
-  # Colyseus multiplayer server (WebSockets need a persistent process,
-  # which is why this lives on Render instead of Vercel).
+  # ONLY the Colyseus multiplayer server belongs on Render.
+  # Deploy the Next.js app separately on Vercel (do NOT run npm run dev here).
   - type: web
-    name: pulse-club-server
+    name: virtualclub
     runtime: node
     plan: free
+    # Build the server package only
     buildCommand: npm install && npm run build -w server
+    # Production start — never "npm run dev"
     startCommand: npm start -w server
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: NODE_ENV
+        value: production

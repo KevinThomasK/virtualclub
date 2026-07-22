@@ -17,6 +17,6 @@ const gameServer = new Server({ server: httpServer });
 
 gameServer.define("concert", ConcertRoom);
 
-httpServer.listen(PORT, () => {
-  console.log(`Colyseus server listening on ws://localhost:${PORT}`);
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`Colyseus server listening on 0.0.0.0:${PORT}`);
 });

@@ -253,6 +253,18 @@ select {
   }
 }
 
+@keyframes photoShutter {
+  0% {
+    opacity: 1;
+  }
+  35% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .landing__content {
     justify-content: flex-end;

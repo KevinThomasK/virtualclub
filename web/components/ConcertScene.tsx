@@ -49,6 +49,8 @@ type SceneProps = {
   partyUntil: number;
   djMode: string;
   photoFlashes: PhotoFlashEvent[];
+  /** Optimistic seat while waiting for server sit ack. */
+  pendingSeat?: number | null;
   onMove: (payload: {
     x: number;
     y: number;
@@ -515,6 +517,7 @@ function LocalController({
   localName,
   localOutfit,
   players,
+  pendingSeat,
   onMove,
   onEmote,
   onZoneChange,
@@ -526,7 +529,9 @@ function LocalController({
   speakingIds,
 }: SceneProps) {
   const localPlayer = players.find((player) => player.sessionId === sessionId);
-  const localSeat = localPlayer?.seat ?? -1;
+  const serverSeat = localPlayer?.seat ?? -1;
+  const localSeat =
+    serverSeat >= 0 ? serverSeat : (pendingSeat ?? -1);
   const seated = localSeat >= 0;
   const groupRef = useRef<THREE.Group>(null);
   const markerRef = useRef<THREE.Mesh>(null);
@@ -602,16 +607,21 @@ function LocalController({
       ["dance", "wave", "cheer", "pose"].includes(localPlayer.anim)
     ) {
       setAnim(localPlayer.anim);
+      // Keep emote locked so the locomotion loop doesn't instantly wipe pose
+      // (photo booth used to look like "nothing happened").
+      emoteUntilRef.current = performance.now() + 2800;
     }
   }, [localPlayer?.anim]);
 
-  // When the server confirms a seat, snap the local avatar onto it.
+  // When the server (or optimistic pending seat) confirms a seat, snap onto it.
   useEffect(() => {
     if (localSeat >= 0) {
       const seat = getSeatWorld(localSeat);
       if (seat) {
         positionRef.current.set(seat.x, 0, seat.z);
         rotationRef.current = seat.rotY;
+        setAnim(isLoungeSeat(localSeat) ? "chill" : "sit");
+        emoteUntilRef.current = 0;
       }
     }
   }, [localSeat]);
@@ -690,6 +700,8 @@ function LocalController({
     const group = groupRef.current;
     if (group) {
       group.position.copy(positionRef.current);
+      // Lift onto the couch cushion so sitting is obvious from third person.
+      group.position.y = isLoungeSeat(localSeat) ? 0.28 : 0;
       group.rotation.y = rotationRef.current;
     }
 

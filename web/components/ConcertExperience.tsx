@@ -7,6 +7,7 @@ import { ClubQuestPanel } from "@/components/ClubQuestPanel";
 import { ConcertHUD } from "@/components/ConcertHUD";
 import { ClubMusic } from "@/components/ClubMusic";
 import { DjVotePanel } from "@/components/DjVotePanel";
+import { ChillPanel } from "@/components/ChillPanel";
 import { VoicePanel } from "@/components/VoicePanel";
 import { useClubProgress } from "@/hooks/useClubProgress";
 import { useConcertRoom } from "@/hooks/useConcertRoom";
@@ -29,6 +30,9 @@ export function ConcertExperience() {
   const [musicEnabled, setMusicEnabled] = useState(false);
   const [showHelp, setShowHelp] = useState(true);
   const [mouseLookActive, setMouseLookActive] = useState(false);
+  /** Optimistic seat index so G-to-sit isn't undone by in-flight move packets. */
+  const [pendingSeat, setPendingSeat] = useState<number | null>(null);
+  const [photoBurst, setPhotoBurst] = useState(0);
 
   const progress = useClubProgress();
 
@@ -53,6 +57,7 @@ export function ConcertExperience() {
     reactions,
     photoFlashes,
     clubToasts,
+    pushClubToast,
     error,
     sendMove,
     sendEmote,
@@ -83,13 +88,31 @@ export function ConcertExperience() {
   // --- Voice lounge (Clubhouse-style) ---
   const localSnapshot = players.find((p) => p.sessionId === sessionId);
   const localSeat = localSnapshot?.seat ?? -1;
-  const localVoiceSeated = isVoiceSeat(localSeat);
-  const localLoungeSeated = isLoungeSeat(localSeat);
-  const localSeated = localSeat >= 0;
+  const effectiveSeat = localSeat >= 0 ? localSeat : (pendingSeat ?? -1);
+  const localVoiceSeated = isVoiceSeat(effectiveSeat);
+  const localLoungeSeated = isLoungeSeat(effectiveSeat);
   const seatedPlayers = useMemo(
     () => players.filter((p) => isVoiceSeat(p.seat)),
     [players],
   );
+
+  useEffect(() => {
+    if (localSeat >= 0) setPendingSeat(null);
+  }, [localSeat]);
+
+  useEffect(() => {
+    if (pendingSeat === null) return;
+    const timer = window.setTimeout(() => setPendingSeat(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [pendingSeat]);
+
+  // Full-screen shutter for remote photos (local already flashes on G press).
+  useEffect(() => {
+    if (photoFlashes.length === 0) return;
+    const latest = photoFlashes[photoFlashes.length - 1];
+    if (latest.sessionId === sessionId) return;
+    setPhotoBurst((n) => n + 1);
+  }, [photoFlashes, sessionId]);
   const voicePeerIds = useMemo(
     () =>
       seatedPlayers
@@ -139,14 +162,22 @@ export function ConcertExperience() {
     // In the Voice Lounge, G toggles sitting (and with it, live voice chat).
     if (activeZone?.id === "voice") {
       if (localVoiceSeated) {
+        setPendingSeat(null);
         sendStand();
         return;
       }
-      if (localLoungeSeated) sendStand();
+      if (localLoungeSeated) {
+        setPendingSeat(null);
+        sendStand();
+      }
       const occupied = new Set(seatedPlayers.map((p) => p.seat));
       const freeSeat = VOICE_SEATS.findIndex((_, index) => !occupied.has(index));
       if (freeSeat >= 0) {
+        setPendingSeat(freeSeat);
         sendSit(freeSeat);
+        pushClubToast("Sat down in the Voice Lounge — mic is live");
+      } else {
+        pushClubToast("All voice seats are taken");
       }
       return;
     }
@@ -154,10 +185,15 @@ export function ConcertExperience() {
     // Chill Lounge — sit on the couch and sip a drink.
     if (activeZone?.id === "lounge") {
       if (localLoungeSeated) {
+        setPendingSeat(null);
         sendStand();
+        pushClubToast("Stood up from the couch");
         return;
       }
-      if (localVoiceSeated) sendStand();
+      if (localVoiceSeated) {
+        setPendingSeat(null);
+        sendStand();
+      }
       const occupied = new Set(
         players.filter((p) => isLoungeSeat(p.seat)).map((p) => p.seat),
       );
@@ -165,15 +201,21 @@ export function ConcertExperience() {
         (_, index) => !occupied.has(LOUNGE_SEAT_OFFSET + index),
       );
       if (freeIndex >= 0) {
-        sendSit(LOUNGE_SEAT_OFFSET + freeIndex);
+        const seatIndex = LOUNGE_SEAT_OFFSET + freeIndex;
+        setPendingSeat(seatIndex);
+        sendSit(seatIndex);
+        pushClubToast("Chilling on the couch — sip and relax 🍹");
         const result = progress.interactZone(activeZone);
         if (result) handleChat(result.chatMessage);
+      } else {
+        pushClubToast("Couch is full — wait for a free seat");
       }
       return;
     }
 
     // Photo wall — flash + pose broadcast to the whole club.
     if (activeZone?.id === "photo") {
+      setPhotoBurst((n) => n + 1);
       sendPhoto();
       progress.interactZone(activeZone);
       return;
@@ -202,6 +244,7 @@ export function ConcertExperience() {
     localVoiceSeated,
     players,
     progress,
+    pushClubToast,
     seatedPlayers,
     sendPhoto,
     sendSit,
@@ -278,7 +321,13 @@ export function ConcertExperience() {
         partyUntil={partyUntil}
         djMode={djLive ? djMode : ""}
         photoFlashes={photoFlashes}
-        onMove={sendMove}
+        pendingSeat={pendingSeat}
+        onMove={(payload) => {
+          if (pendingSeat !== null && payload.anim === "walk") {
+            setPendingSeat(null);
+          }
+          sendMove(payload);
+        }}
         onEmote={handleEmote}
         onZoneChange={handleZoneChange}
         onMouseLookChange={setMouseLookActive}
@@ -286,7 +335,10 @@ export function ConcertExperience() {
         glowBuffActive={progress.glowBuffActive}
         onPositionUpdate={progress.updatePlayerPosition}
         onInteract={handleInteract}
-        onSit={sendSit}
+        onSit={(seatIndex) => {
+          setPendingSeat(seatIndex);
+          sendSit(seatIndex);
+        }}
         speakingIds={voice.speakingIds}
       />
 
@@ -299,6 +351,23 @@ export function ConcertExperience() {
         djModeUntil={djModeUntil}
         onVote={sendDjVote}
       />
+
+      {/* Full-viewport camera shutter when a photo fires */}
+      {photoBurst > 0 ? (
+        <div
+          key={photoBurst}
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 80,
+            pointerEvents: "none",
+            background:
+              "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.95) 0%, rgba(255,240,250,0.55) 35%, rgba(255,255,255,0) 70%)",
+            animation: "photoShutter 0.55s ease-out forwards",
+          }}
+        />
+      ) : null}
 
       {/* Club-wide activity toasts (sync / photo / DJ drop) */}
       <div
@@ -334,13 +403,25 @@ export function ConcertExperience() {
         ))}
       </div>
 
+      <ChillPanel
+        seated={localLoungeSeated}
+        onStand={() => {
+          setPendingSeat(null);
+          sendStand();
+          pushClubToast("Stood up from the couch");
+        }}
+      />
+
       <VoicePanel
         seated={localVoiceSeated}
         micReady={voice.micReady}
         micError={voice.micError}
         muted={voice.muted}
         onToggleMute={voice.toggleMute}
-        onStand={sendStand}
+        onStand={() => {
+          setPendingSeat(null);
+          sendStand();
+        }}
         localSessionId={sessionId}
         participants={seatedPlayers}
         speakingIds={voice.speakingIds}

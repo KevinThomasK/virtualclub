@@ -152,6 +152,11 @@ export function useConcertRoom(options: JoinOptions | null) {
   const voiceHandlerRef = useRef<VoiceSignalHandler | null>(null);
   const liveTargetsRef = useRef<Map<string, LiveTarget>>(new Map());
   const snapshotRef = useRef<PlayerSnapshot[]>([]);
+  const pushToastRef = useRef<(message: string) => void>(() => {});
+
+  const pushClubToast = useCallback((message: string) => {
+    pushToastRef.current(message);
+  }, []);
 
   useEffect(() => {
     if (!options) {
@@ -195,6 +200,7 @@ export function useConcertRoom(options: JoinOptions | null) {
             );
           }, 4200);
         };
+        pushToastRef.current = pushToast;
 
         room.onMessage(
           "reaction",
@@ -252,6 +258,21 @@ export function useConcertRoom(options: JoinOptions | null) {
                 current.filter((entry) => entry.id !== id),
               );
             }, 2800);
+          },
+        );
+
+        room.onMessage(
+          "photoAck",
+          (payload: { ok: boolean; reason?: string; waitMs?: number }) => {
+            if (payload.ok) return;
+            if (payload.reason === "too_far") {
+              pushToast("Move closer to the photo wall, then press G");
+            } else if (payload.reason === "cooldown") {
+              const secs = Math.ceil((payload.waitMs ?? 5000) / 1000);
+              pushToast(`Photo cooling down — try again in ${secs}s`);
+            } else {
+              pushToast("Couldn’t snap that photo — try again");
+            }
           },
         );
 
@@ -468,6 +489,7 @@ export function useConcertRoom(options: JoinOptions | null) {
     danceSyncs,
     photoFlashes,
     clubToasts,
+    pushClubToast,
     error,
     sendMove,
     sendEmote,

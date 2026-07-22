@@ -25,7 +25,7 @@ const REACTION_EMOJIS = new Set(["❤️", "🔥", "🎉", "⚡", "👏", "😂"
 const DJ_STYLES = new Set(["bass", "chill", "hyper"]);
 
 const DANCE_FLOOR = { x: 0, z: -2, radius: 7 };
-const PHOTO_WALL = { x: 16, z: 14, radius: 3.8 };
+const PHOTO_WALL = { x: 16, z: 14, radius: 5.5 };
 const DJ_ZONE = { x: 0, z: -14, radius: 8 };
 
 // Voice lounge seats — must match web/lib/clubLayout.ts VOICE_LOUNGE.
@@ -183,8 +183,16 @@ export class ConcertRoom extends Room<ConcertState> {
       const player = this.state.players.get(client.sessionId);
       if (!player) return;
 
-      // Moving while seated stands the player up (leaves voice chat).
+      // Moving while seated stands the player up — but ignore tiny jitter /
+      // stale move packets that arrive right after a sit ack (otherwise G-to-sit
+      // looks like "nothing happened").
       if (player.seat >= 0) {
+        const dx = message.x - player.x;
+        const dz = message.z - player.z;
+        const moved = dx * dx + dz * dz > 0.22 * 0.22;
+        if (!moved && message.anim !== "walk") {
+          return;
+        }
         player.seat = -1;
       }
 
@@ -254,11 +262,25 @@ export class ConcertRoom extends Room<ConcertState> {
 
     this.onMessage("photo", (client, _message: PhotoMessage) => {
       const player = this.state.players.get(client.sessionId);
-      if (!player || !inRadius(player, PHOTO_WALL)) return;
+      if (!player) {
+        client.send("photoAck", { ok: false, reason: "invalid" });
+        return;
+      }
+      if (!inRadius(player, PHOTO_WALL)) {
+        client.send("photoAck", { ok: false, reason: "too_far" });
+        return;
+      }
 
       const now = Date.now();
       const last = this.lastPhotoAt.get(client.sessionId) ?? 0;
-      if (now - last < PHOTO_COOLDOWN_MS) return;
+      if (now - last < PHOTO_COOLDOWN_MS) {
+        client.send("photoAck", {
+          ok: false,
+          reason: "cooldown",
+          waitMs: PHOTO_COOLDOWN_MS - (now - last),
+        });
+        return;
+      }
       this.lastPhotoAt.set(client.sessionId, now);
 
       player.anim = "pose";
@@ -269,6 +291,7 @@ export class ConcertRoom extends Room<ConcertState> {
         x: player.x,
         z: player.z,
       });
+      client.send("photoAck", { ok: true });
 
       this.clock.setTimeout(() => {
         if (player.anim === "pose") {
