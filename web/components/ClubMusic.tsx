@@ -168,8 +168,16 @@ export function ClubMusic({ enabled, boost, mode = "" }: ClubMusicProps) {
       schedule();
     });
 
+    const unlock = () => {
+      if (ctx.state === "suspended") void ctx.resume();
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+
     return () => {
       window.clearTimeout(timer);
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
       void ctx.close();
       ctxRef.current = null;
       masterGainRef.current = null;

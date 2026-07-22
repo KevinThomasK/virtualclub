@@ -27,7 +27,7 @@ export function ConcertExperience() {
   const user = session?.user;
   const ready = status === "authenticated" && !!user;
   const [activeZone, setActiveZone] = useState<ConcertZone | null>(null);
-  const [musicEnabled, setMusicEnabled] = useState(false);
+  const [musicEnabled, setMusicEnabled] = useState(true);
   const [showHelp, setShowHelp] = useState(true);
   const [mouseLookActive, setMouseLookActive] = useState(false);
   /** Optimistic seat index so G-to-sit isn't undone by in-flight move packets. */
