@@ -25,7 +25,6 @@ export function ChillPanel({ seated, onStand, mobile = false }: ChillPanelProps)
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(167, 139, 250, 0.5)",
         borderRadius: 16,
-        padding: "14px 16px",
         zIndex: 60,
         boxShadow: "0 0 30px rgba(139, 92, 246, 0.28)",
         color: "#e2e8f0",

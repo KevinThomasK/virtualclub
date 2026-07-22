@@ -47,7 +47,6 @@ export function VoicePanel({
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(52, 211, 153, 0.45)",
         borderRadius: 16,
-        padding: "14px 16px",
         zIndex: 60,
         boxShadow: "0 0 30px rgba(16, 185, 129, 0.25)",
         color: "#e2e8f0",
