@@ -1,0 +1,13 @@
+services:
+  # Colyseus multiplayer server (WebSockets need a persistent process,
+  # which is why this lives on Render instead of Vercel).
+  - type: web
+    name: pulse-club-server
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build -w server
+    startCommand: npm start -w server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
