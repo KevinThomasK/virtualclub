@@ -86,7 +86,6 @@ export function DjVotePanel({
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(244, 114, 182, 0.45)",
         borderRadius: 16,
-        padding: "14px 16px",
         zIndex: 55,
         boxShadow: "0 0 28px rgba(236, 72, 153, 0.25)",
         color: "#e2e8f0",
