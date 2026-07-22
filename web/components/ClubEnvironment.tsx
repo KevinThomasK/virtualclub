@@ -9,6 +9,7 @@ import {
 import { extend, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { DjCharacter } from "@/components/DjCharacter";
+import { BartenderCharacter } from "@/components/BartenderCharacter";
 import { CLUB_SIZE, DJ_POSITION, VOICE_LOUNGE } from "@/lib/clubLayout";
 
 const { width, depth, wallHeight } = CLUB_SIZE;
@@ -441,6 +442,7 @@ function BarArea() {
           />
         </mesh>
       ))}
+      <BartenderCharacter />
       <Text position={[0, 2.4, 0]} fontSize={0.28} color="#22d3ee" anchorX="center">
         BAR
       </Text>
@@ -482,15 +484,71 @@ function VipBooths() {
 function LoungeArea() {
   return (
     <group position={[-16, 0, 14]}>
-      <mesh position={[0, 0.35, 0]} castShadow>
-        <boxGeometry args={[5, 0.7, 2.2]} />
+      {/* Soft rug */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0.6]} receiveShadow>
+        <planeGeometry args={[6.5, 4.2]} />
+        <meshStandardMaterial color="#1e1b4b" roughness={0.95} />
+      </mesh>
+
+      {/* Couch base */}
+      <mesh position={[0, 0.32, 0]} castShadow receiveShadow>
+        <boxGeometry args={[5.2, 0.55, 2.0]} />
         <meshStandardMaterial color="#312e81" roughness={0.85} />
       </mesh>
-      <mesh position={[0, 0.75, -0.5]} castShadow>
-        <boxGeometry args={[4.5, 0.5, 0.6]} />
-        <meshStandardMaterial color="#4338ca" roughness={0.9} />
+      {/* Seat cushions */}
+      {[-1.5, 0, 1.5].map((x) => (
+        <mesh key={x} position={[x, 0.62, 0.15]} castShadow>
+          <boxGeometry args={[1.45, 0.22, 1.5]} />
+          <meshStandardMaterial color="#4338ca" roughness={0.9} />
+        </mesh>
+      ))}
+      {/* Backrest */}
+      <mesh position={[0, 0.95, -0.75]} castShadow>
+        <boxGeometry args={[5.2, 0.95, 0.45]} />
+        <meshStandardMaterial color="#3730a3" roughness={0.88} />
       </mesh>
-      <pointLight position={[0, 2, 0]} intensity={5} color="#a78bfa" distance={5} />
+      {/* Armrests */}
+      {[-2.45, 2.45].map((x) => (
+        <mesh key={x} position={[x, 0.7, 0]} castShadow>
+          <boxGeometry args={[0.35, 0.7, 2.0]} />
+          <meshStandardMaterial color="#312e81" roughness={0.85} />
+        </mesh>
+      ))}
+
+      {/* Coffee table + drinks */}
+      <mesh position={[0, 0.28, 1.55]} castShadow>
+        <boxGeometry args={[2.2, 0.12, 0.9]} />
+        <meshStandardMaterial color="#1e1b4b" metalness={0.4} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.12, 1.55]}>
+        <boxGeometry args={[0.15, 0.28, 0.15]} />
+        <meshStandardMaterial color="#312e81" />
+      </mesh>
+      {[
+        [-0.45, "#22d3ee"],
+        [0.05, "#a78bfa"],
+        [0.5, "#f472b6"],
+      ].map(([x, color]) => (
+        <mesh key={String(x)} position={[x as number, 0.42, 1.55]}>
+          <cylinderGeometry args={[0.05, 0.04, 0.14, 10]} />
+          <meshStandardMaterial
+            color={color as string}
+            emissive={color as string}
+            emissiveIntensity={0.7}
+            transparent
+            opacity={0.9}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+
+      <pointLight position={[0, 2.2, 0.4]} intensity={7} color="#a78bfa" distance={7} />
+      <Text position={[0, 2.55, -0.2]} fontSize={0.26} color="#c4b5fd" anchorX="center">
+        CHILL LOUNGE
+      </Text>
+      <Text position={[0, 2.2, -0.2]} fontSize={0.14} color="#a78bfa" anchorX="center">
+        press G to sit & sip
+      </Text>
     </group>
   );
 }

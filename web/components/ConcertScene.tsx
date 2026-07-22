@@ -9,7 +9,7 @@ import { Avatar } from "@/components/Avatar";
 import { ClubCollectibles } from "@/components/ClubCollectibles";
 import { ClubEnvironment } from "@/components/ClubEnvironment";
 import { PhotoFlashes } from "@/components/PhotoFlashes";
-import { CLUB_BOUNDS, VOICE_SEATS } from "@/lib/clubLayout";
+import { CLUB_BOUNDS, VOICE_SEATS, getSeatWorld, isLoungeSeat, isVoiceSeat } from "@/lib/clubLayout";
 import { CONCERT_ZONES, getZoneAt } from "@/lib/concertZones";
 import type { ConcertZone } from "@/lib/concertZones";
 import type { AvatarOutfit } from "@/lib/avatarCatalog";
@@ -415,10 +415,13 @@ function VoiceSeats({
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const occupiedSeats = useMemo(
-    () => new Set(players.filter((p) => p.seat >= 0).map((p) => p.seat)),
+    () =>
+      new Set(
+        players.filter((p) => isVoiceSeat(p.seat)).map((p) => p.seat),
+      ),
     [players],
   );
-  const canSit = localSeat < 0;
+  const canSit = !isVoiceSeat(localSeat);
 
   return (
     <group>
@@ -541,7 +544,7 @@ function LocalController({
   const lastZoneRef = useRef<string | null>(null);
   const emoteUntilRef = useRef(0);
   const [anim, setAnim] = useState<
-    "idle" | "walk" | "dance" | "wave" | "cheer" | "pose" | "sit"
+    "idle" | "walk" | "dance" | "wave" | "cheer" | "pose" | "sit" | "chill"
   >("idle");
   const [currentZone, setCurrentZone] = useState<ConcertZone | null>(null);
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
@@ -605,7 +608,7 @@ function LocalController({
   // When the server confirms a seat, snap the local avatar onto it.
   useEffect(() => {
     if (localSeat >= 0) {
-      const seat = VOICE_SEATS[localSeat];
+      const seat = getSeatWorld(localSeat);
       if (seat) {
         positionRef.current.set(seat.x, 0, seat.z);
         rotationRef.current = seat.rotY;
@@ -663,8 +666,13 @@ function LocalController({
       CLUB_BOUNDS.maxZ,
     );
 
-    // While seated (and not trying to move), rest pose is "sit" instead of "idle".
-    const locomotion = moving ? "walk" : seated ? "sit" : "idle";
+    // While seated (and not trying to move), rest pose is sit/chill.
+    const seatedPose = isLoungeSeat(localSeat)
+      ? "chill"
+      : isVoiceSeat(localSeat)
+        ? "sit"
+        : "idle";
+    const locomotion = moving ? "walk" : seated ? seatedPose : "idle";
     if (!inEmote && anim !== locomotion) {
       setAnim(locomotion);
     }

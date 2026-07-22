@@ -36,3 +36,31 @@ export const VOICE_SEATS: VoiceSeat[] = Array.from(
     };
   },
 );
+
+/** Couch seats in the Chill Lounge — indices are offset so they never collide with voice seats. */
+export const LOUNGE_SEAT_OFFSET = 10;
+export const LOUNGE_ORIGIN = { x: -16, z: 14 };
+
+export const LOUNGE_SEATS: VoiceSeat[] = [
+  { x: LOUNGE_ORIGIN.x - 1.4, z: LOUNGE_ORIGIN.z + 0.15, rotY: 0 },
+  { x: LOUNGE_ORIGIN.x, z: LOUNGE_ORIGIN.z + 0.15, rotY: 0 },
+  { x: LOUNGE_ORIGIN.x + 1.4, z: LOUNGE_ORIGIN.z + 0.15, rotY: 0 },
+];
+
+export function isVoiceSeat(seat: number) {
+  return seat >= 0 && seat < VOICE_LOUNGE.seatCount;
+}
+
+export function isLoungeSeat(seat: number) {
+  return (
+    seat >= LOUNGE_SEAT_OFFSET &&
+    seat < LOUNGE_SEAT_OFFSET + LOUNGE_SEATS.length
+  );
+}
+
+export function getSeatWorld(seat: number): VoiceSeat | null {
+  if (isVoiceSeat(seat)) return VOICE_SEATS[seat];
+  if (isLoungeSeat(seat)) return LOUNGE_SEATS[seat - LOUNGE_SEAT_OFFSET];
+  return null;
+}
+

@@ -94,10 +94,9 @@ export const ZONE_ACTIONS: Record<string, ZoneAction> = {
     emote: "pose",
   },
   lounge: {
-    label: "Chill out",
-    hint: "Relax on the lounge seating",
-    chatMessage: "Chilling in the lounge ✨",
-    emote: "wave",
+    label: "Chill on the couch",
+    hint: "Sit back, relax, and sip a neon drink",
+    chatMessage: "Chilling on the couch ✨🍹",
   },
   photo: {
     label: "Take a photo",

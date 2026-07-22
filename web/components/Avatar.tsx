@@ -183,18 +183,26 @@ function ProceduralAvatar({
       ring.scale.setScalar(pulse);
     }
 
-    if (anim === "sit") {
-      // Seated on a lounge stool: body lowered, legs folded forward.
+    if (anim === "sit" || anim === "chill") {
+      // Seated: body lowered, legs folded. Chill adds a sip-drink arm loop.
       body.position.y = THREE.MathUtils.lerp(body.position.y, 0.62, blend);
       head.position.y = THREE.MathUtils.lerp(head.position.y, 1.42, blend);
       leftLeg.rotation.x = THREE.MathUtils.lerp(leftLeg.rotation.x, -1.35, blend);
       rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, -1.35, blend);
       leftArm.rotation.x = THREE.MathUtils.lerp(leftArm.rotation.x, -0.35, blend);
-      rightArm.rotation.x = THREE.MathUtils.lerp(rightArm.rotation.x, -0.35, blend);
-      leftArm.rotation.z = THREE.MathUtils.lerp(leftArm.rotation.z, 0.1, blend);
-      rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, -0.1, blend);
-      // Gentle head bob so seated players still feel alive.
-      head.rotation.z = Math.sin(t * 1.5) * 0.04;
+      leftArm.rotation.z = THREE.MathUtils.lerp(leftArm.rotation.z, 0.15, blend);
+
+      if (anim === "chill") {
+        // Slow sip: raise glass toward face, then rest on the knee.
+        const sip = (Math.sin(t * 1.1) * 0.5 + 0.5) ** 1.6;
+        rightArm.rotation.x = THREE.MathUtils.lerp(-0.45, -1.55, sip);
+        rightArm.rotation.z = THREE.MathUtils.lerp(-0.15, 0.35, sip);
+        head.rotation.z = Math.sin(t * 0.8) * 0.05 - sip * 0.08;
+      } else {
+        rightArm.rotation.x = THREE.MathUtils.lerp(rightArm.rotation.x, -0.35, blend);
+        rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, -0.1, blend);
+        head.rotation.z = Math.sin(t * 1.5) * 0.04;
+      }
       body.rotation.y = THREE.MathUtils.lerp(body.rotation.y, 0, blend);
       return;
     }
@@ -568,6 +576,34 @@ function ProceduralAvatar({
           <sphereGeometry args={[0.065, 16, 16]} />
           <meshStandardMaterial color={colors.accent} emissive={colors.accent} emissiveIntensity={isRave || isCyber ? 1.5 : 0.4} toneMapped={false} />
         </mesh>
+        {anim === "chill" ? (
+          <group position={[0.02, -0.52, 0.06]} rotation={[0.4, 0, 0.2]}>
+            <mesh>
+              <cylinderGeometry args={[0.045, 0.035, 0.12, 12]} />
+              <meshStandardMaterial
+                color="#67e8f9"
+                emissive="#22d3ee"
+                emissiveIntensity={1.4}
+                transparent
+                opacity={0.85}
+                toneMapped={false}
+              />
+            </mesh>
+            <mesh position={[0, 0.08, 0]}>
+              <cylinderGeometry args={[0.012, 0.012, 0.08, 8]} />
+              <meshStandardMaterial color="#e2e8f0" metalness={0.7} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, -0.04, 0]}>
+              <sphereGeometry args={[0.03, 10, 10]} />
+              <meshStandardMaterial
+                color="#a78bfa"
+                emissive="#a78bfa"
+                emissiveIntensity={0.8}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        ) : null}
       </group>
 
       {showNameTag ? (
@@ -615,7 +651,7 @@ function ProceduralAvatar({
 
       {speaking ? (
         <Html
-          position={[0, anim === "sit" ? 2.35 : 2.85, 0]}
+          position={[0, anim === "sit" || anim === "chill" ? 2.35 : 2.85, 0]}
           center
           distanceFactor={10}
           style={{

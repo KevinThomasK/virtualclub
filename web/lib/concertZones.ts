@@ -48,7 +48,7 @@ export const CONCERT_ZONES: ConcertZone[] = [
   {
     id: "lounge",
     label: "Chill Lounge",
-    hint: "Low lights, comfy seating",
+    hint: "Press G to sit on the couch and sip a drink",
     x: -16,
     z: 14,
     radius: 4,

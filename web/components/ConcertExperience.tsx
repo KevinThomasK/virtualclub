@@ -12,7 +12,7 @@ import { useClubProgress } from "@/hooks/useClubProgress";
 import { useConcertRoom } from "@/hooks/useConcertRoom";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
 import type { ConcertZone } from "@/lib/concertZones";
-import { VOICE_SEATS } from "@/lib/clubLayout";
+import { VOICE_SEATS, LOUNGE_SEATS, LOUNGE_SEAT_OFFSET, isVoiceSeat, isLoungeSeat } from "@/lib/clubLayout";
 import type { EmoteType } from "@/lib/types";
 
 const ConcertScene = dynamic(
@@ -82,9 +82,12 @@ export function ConcertExperience() {
 
   // --- Voice lounge (Clubhouse-style) ---
   const localSnapshot = players.find((p) => p.sessionId === sessionId);
-  const localSeated = (localSnapshot?.seat ?? -1) >= 0;
+  const localSeat = localSnapshot?.seat ?? -1;
+  const localVoiceSeated = isVoiceSeat(localSeat);
+  const localLoungeSeated = isLoungeSeat(localSeat);
+  const localSeated = localSeat >= 0;
   const seatedPlayers = useMemo(
-    () => players.filter((p) => p.seat >= 0),
+    () => players.filter((p) => isVoiceSeat(p.seat)),
     [players],
   );
   const voicePeerIds = useMemo(
@@ -96,7 +99,7 @@ export function ConcertExperience() {
   );
 
   const voice = useVoiceChat({
-    active: localSeated,
+    active: localVoiceSeated,
     localSessionId: sessionId,
     peerIds: voicePeerIds,
     sendSignal: sendVoiceSignal,
@@ -135,14 +138,36 @@ export function ConcertExperience() {
   const handleInteract = useCallback(() => {
     // In the Voice Lounge, G toggles sitting (and with it, live voice chat).
     if (activeZone?.id === "voice") {
-      if (localSeated) {
+      if (localVoiceSeated) {
         sendStand();
         return;
       }
+      if (localLoungeSeated) sendStand();
       const occupied = new Set(seatedPlayers.map((p) => p.seat));
       const freeSeat = VOICE_SEATS.findIndex((_, index) => !occupied.has(index));
       if (freeSeat >= 0) {
         sendSit(freeSeat);
+      }
+      return;
+    }
+
+    // Chill Lounge — sit on the couch and sip a drink.
+    if (activeZone?.id === "lounge") {
+      if (localLoungeSeated) {
+        sendStand();
+        return;
+      }
+      if (localVoiceSeated) sendStand();
+      const occupied = new Set(
+        players.filter((p) => isLoungeSeat(p.seat)).map((p) => p.seat),
+      );
+      const freeIndex = LOUNGE_SEATS.findIndex(
+        (_, index) => !occupied.has(LOUNGE_SEAT_OFFSET + index),
+      );
+      if (freeIndex >= 0) {
+        sendSit(LOUNGE_SEAT_OFFSET + freeIndex);
+        const result = progress.interactZone(activeZone);
+        if (result) handleChat(result.chatMessage);
       }
       return;
     }
@@ -173,7 +198,9 @@ export function ConcertExperience() {
     activeZone,
     handleChat,
     handleEmote,
-    localSeated,
+    localLoungeSeated,
+    localVoiceSeated,
+    players,
     progress,
     seatedPlayers,
     sendPhoto,
@@ -308,7 +335,7 @@ export function ConcertExperience() {
       </div>
 
       <VoicePanel
-        seated={localSeated}
+        seated={localVoiceSeated}
         micReady={voice.micReady}
         micError={voice.micError}
         muted={voice.muted}
@@ -370,6 +397,7 @@ export function ConcertExperience() {
               <div><strong style={{ color: "#f472b6" }}>Space / E / F / R</strong> — dance, wave, cheer, pose</div>
               <div><strong style={{ color: "#818cf8" }}>Dance floor</strong> — dance together within 1s for Synced!</div>
               <div><strong style={{ color: "#fb7185" }}>Photo wall</strong> — press G to snap a flash photo</div>
+              <div><strong style={{ color: "#a78bfa" }}>Chill Lounge</strong> — press G to sit on the couch &amp; sip</div>
               <div><strong style={{ color: "#f472b6" }}>DJ booth</strong> — vote Bass / Chill / Hyper</div>
               <div><strong style={{ color: "#34d399" }}>Voice Lounge</strong> — walk to the green circle, press <strong>G</strong> (or click a stool) to sit &amp; talk live</div>
             </div>

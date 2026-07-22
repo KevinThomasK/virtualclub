@@ -7,7 +7,8 @@ export type AnimState =
   | "wave"
   | "cheer"
   | "pose"
-  | "sit";
+  | "sit"
+  | "chill";
 
 export type EmoteType = "dance" | "wave" | "cheer" | "pose";
 

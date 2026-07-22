@@ -43,6 +43,32 @@ const VOICE_SEATS = Array.from({ length: VOICE_SEAT_COUNT }, (_, i) => {
   };
 });
 
+// Chill lounge couch — indices 10+ so they never collide with voice seats.
+const LOUNGE_SEAT_OFFSET = 10;
+const LOUNGE_ORIGIN = { x: -16, z: 14 };
+const LOUNGE_SEATS = [
+  { x: LOUNGE_ORIGIN.x - 1.4, z: LOUNGE_ORIGIN.z + 0.15, rotY: 0 },
+  { x: LOUNGE_ORIGIN.x, z: LOUNGE_ORIGIN.z + 0.15, rotY: 0 },
+  { x: LOUNGE_ORIGIN.x + 1.4, z: LOUNGE_ORIGIN.z + 0.15, rotY: 0 },
+];
+
+function isVoiceSeat(seat: number) {
+  return seat >= 0 && seat < VOICE_SEAT_COUNT;
+}
+
+function isLoungeSeat(seat: number) {
+  return (
+    seat >= LOUNGE_SEAT_OFFSET &&
+    seat < LOUNGE_SEAT_OFFSET + LOUNGE_SEATS.length
+  );
+}
+
+function seatedAnim(seat: number) {
+  if (isLoungeSeat(seat)) return "chill";
+  if (isVoiceSeat(seat)) return "sit";
+  return "idle";
+}
+
 type JoinOptions = {
   userId: string;
   name: string;
@@ -193,7 +219,7 @@ export class ConcertRoom extends Room<ConcertState> {
 
       this.clock.setTimeout(() => {
         if (player.anim === message.emote) {
-          player.anim = player.seat >= 0 ? "sit" : "idle";
+          player.anim = seatedAnim(player.seat);
         }
       }, EMOTE_DURATION_MS);
     });
@@ -246,7 +272,7 @@ export class ConcertRoom extends Room<ConcertState> {
 
       this.clock.setTimeout(() => {
         if (player.anim === "pose") {
-          player.anim = player.seat >= 0 ? "sit" : "idle";
+          player.anim = seatedAnim(player.seat);
         }
       }, EMOTE_DURATION_MS);
     });
@@ -297,7 +323,15 @@ export class ConcertRoom extends Room<ConcertState> {
       if (!player) return;
 
       const seatIndex = Math.floor(message.seatIndex);
-      if (seatIndex < 0 || seatIndex >= VOICE_SEATS.length) return;
+      let seat: { x: number; z: number; rotY: number } | undefined;
+
+      if (isVoiceSeat(seatIndex)) {
+        seat = VOICE_SEATS[seatIndex];
+      } else if (isLoungeSeat(seatIndex)) {
+        seat = LOUNGE_SEATS[seatIndex - LOUNGE_SEAT_OFFSET];
+      } else {
+        return;
+      }
 
       // Reject if someone else is already on that seat.
       let taken = false;
@@ -306,12 +340,11 @@ export class ConcertRoom extends Room<ConcertState> {
       });
       if (taken) return;
 
-      const seat = VOICE_SEATS[seatIndex];
       player.seat = seatIndex;
       player.x = seat.x;
       player.z = seat.z;
       player.rotY = seat.rotY;
-      player.anim = "sit";
+      player.anim = seatedAnim(seatIndex);
     });
 
     this.onMessage("stand", (client) => {
