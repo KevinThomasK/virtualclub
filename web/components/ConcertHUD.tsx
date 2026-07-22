@@ -26,6 +26,8 @@ type ConcertHUDProps = {
   onHype: () => void;
   onLeave: () => void;
   onInteract: () => void;
+  /** Phone / tablet layout — hides keyboard-centric controls. */
+  compact?: boolean;
 };
 
 export function ConcertHUD({
@@ -45,6 +47,7 @@ export function ConcertHUD({
   onHype,
   onLeave,
   onInteract,
+  compact = false,
 }: ConcertHUDProps) {
   const [chatInput, setChatInput] = useState("");
   const [hypeCooldown, setHypeCooldown] = useState(0);
@@ -92,18 +95,18 @@ export function ConcertHUD({
       <div
         style={{
           position: "absolute",
-          top: 16,
-          left: 16,
-          right: 16,
+          top: compact ? 8 : 16,
+          left: compact ? 8 : 16,
+          right: compact ? 8 : 16,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          gap: 12,
+          gap: 8,
           pointerEvents: "none",
           zIndex: 50,
         }}
       >
-        <div style={{ display: "grid", gap: 10, pointerEvents: "none" }}>
+        <div style={{ display: "grid", gap: compact ? 6 : 10, pointerEvents: "none", minWidth: 0, flex: 1 }}>
           {/* Main Concert Status Box */}
           <div
             style={{
@@ -111,9 +114,10 @@ export function ConcertHUD({
               background: "rgba(10, 11, 18, 0.85)",
               backdropFilter: "blur(12px)",
               border: "1px solid rgba(255, 255, 255, 0.12)",
-              borderRadius: 16,
-              padding: "14px 18px",
-              minWidth: 240,
+              borderRadius: compact ? 12 : 16,
+              padding: compact ? "10px 12px" : "14px 18px",
+              minWidth: compact ? 0 : 240,
+              maxWidth: compact ? "min(210px, 58vw)" : undefined,
               boxShadow: dropActive
                 ? "0 0 30px rgba(244, 114, 182, 0.35), inset 0 0 15px rgba(244, 114, 182, 0.15)"
                 : "0 8px 32px rgba(0, 0, 0, 0.4)",
@@ -354,11 +358,18 @@ export function ConcertHUD({
         style={{
           position: "absolute",
           left: "50%",
-          bottom: 24,
+          ...(compact
+            ? {
+                top: "max(72px, calc(64px + env(safe-area-inset-top)))",
+                bottom: "auto",
+              }
+            : { bottom: 24 }),
           transform: "translateX(-50%)",
           display: "grid",
-          gap: 12,
-          width: "min(760px, calc(100vw - 32px))",
+          gap: compact ? 8 : 12,
+          width: compact
+            ? "min(420px, calc(100vw - 16px))"
+            : "min(760px, calc(100vw - 32px))",
           pointerEvents: "none",
           zIndex: 50,
         }}
@@ -368,8 +379,11 @@ export function ConcertHUD({
           style={{
             pointerEvents: "auto",
             display: "flex",
-            gap: 6,
+            gap: compact ? 4 : 6,
             justifyContent: "center",
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+            paddingBottom: 2,
           }}
         >
           {REACTIONS.map((emoji) => (
@@ -378,23 +392,16 @@ export function ConcertHUD({
               onClick={() => onReaction(emoji)}
               title="Send a live reaction everyone sees"
               style={{
-                width: 40,
-                height: 40,
+                width: compact ? 36 : 40,
+                height: compact ? 36 : 40,
+                flexShrink: 0,
                 borderRadius: "50%",
                 border: "1px solid rgba(255, 255, 255, 0.15)",
                 background: "rgba(10, 11, 18, 0.8)",
                 backdropFilter: "blur(8px)",
-                fontSize: 18,
+                fontSize: compact ? 16 : 18,
                 cursor: "pointer",
                 transition: "transform 0.12s ease, border-color 0.12s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.2)";
-                e.currentTarget.style.borderColor = "rgba(244, 114, 182, 0.6)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
               }}
             >
               {emoji}
@@ -402,7 +409,8 @@ export function ConcertHUD({
           ))}
         </div>
 
-        {/* Emote & Hype Bar */}
+        {/* Emote & Hype Bar — desktop only; mobile uses on-screen controls */}
+        {!compact ? (
         <div
           style={{
             pointerEvents: "auto",
@@ -476,6 +484,7 @@ export function ConcertHUD({
             <kbd style={{ ...keyStyle, position: "relative", zIndex: 1 }}>H</kbd>
           </button>
         </div>
+        ) : null}
 
         {/* Quick Chat & Custom Input Bar */}
         <div
@@ -488,11 +497,12 @@ export function ConcertHUD({
             alignItems: "center",
             background: "rgba(10, 11, 18, 0.75)",
             backdropFilter: "blur(12px)",
-            padding: "8px 12px",
-            borderRadius: 999,
+            padding: compact ? "6px 8px" : "8px 12px",
+            borderRadius: compact ? 14 : 999,
             border: "1px solid rgba(255, 255, 255, 0.1)",
           }}
         >
+          {!compact ? (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {QUICK_CHAT.map((phrase) => (
               <button
@@ -504,23 +514,26 @@ export function ConcertHUD({
               </button>
             ))}
           </div>
+          ) : null}
 
+          {!compact ? (
           <div style={{ width: 1, height: 20, background: "rgba(255, 255, 255, 0.15)", margin: "0 4px" }} />
+          ) : null}
 
-          <form onSubmit={submitChat} style={{ display: "flex", gap: 6, flexGrow: 1, maxWidth: 300 }}>
+          <form onSubmit={submitChat} style={{ display: "flex", gap: 6, flexGrow: 1, maxWidth: compact ? "100%" : 300, width: compact ? "100%" : undefined }}>
             <input
               value={chatInput}
               onChange={(event) => setChatInput(event.target.value)}
-              placeholder="Type message..."
+              placeholder={compact ? "Chat…" : "Type message..."}
               maxLength={40}
               style={{
                 flexGrow: 1,
-                padding: "8px 14px",
+                padding: compact ? "10px 12px" : "8px 14px",
                 borderRadius: 999,
                 border: "1px solid rgba(255, 255, 255, 0.15)",
                 background: "rgba(0, 0, 0, 0.4)",
                 color: "white",
-                fontSize: 12,
+                fontSize: 16, // 16px avoids iOS zoom on focus
                 outline: "none",
               }}
             />
@@ -532,6 +545,7 @@ export function ConcertHUD({
                 borderColor: "#818cf8",
                 color: "white",
                 fontWeight: 600,
+                minHeight: 40,
               }}
             >
               Send
@@ -540,6 +554,7 @@ export function ConcertHUD({
         </div>
 
         {/* Navigation Helper Footer */}
+        {!compact ? (
         <div
           style={{
             textAlign: "center",
@@ -553,6 +568,7 @@ export function ConcertHUD({
           <span style={{ color: "#f472b6", fontWeight: 600 }}>Drag / move mouse</span> Turn ·{" "}
           <span style={{ color: "#fbbf24", fontWeight: 600 }}>G</span> Interact · Quests bottom-right
         </div>
+        ) : null}
       </div>
     </>
   );

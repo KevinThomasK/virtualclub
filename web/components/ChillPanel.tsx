@@ -3,19 +3,22 @@
 type ChillPanelProps = {
   seated: boolean;
   onStand: () => void;
+  mobile?: boolean;
 };
 
 /** Shown while lounging on the chill couch — makes the sit action obvious. */
-export function ChillPanel({ seated, onStand }: ChillPanelProps) {
+export function ChillPanel({ seated, onStand, mobile = false }: ChillPanelProps) {
   if (!seated) return null;
 
   return (
     <div
       style={{
         position: "absolute",
-        left: 16,
-        bottom: 24,
-        width: 250,
+        left: mobile ? 8 : 16,
+        ...(mobile
+          ? { top: "max(120px, calc(110px + env(safe-area-inset-top)))", bottom: "auto" }
+          : { bottom: 24 }),
+        width: mobile ? "min(220px, calc(100vw - 140px))" : 250,
         background: "rgba(24, 16, 48, 0.94)",
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(167, 139, 250, 0.5)",

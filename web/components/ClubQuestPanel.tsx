@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CONCERT_ZONES } from "@/lib/concertZones";
 import { getZoneAction } from "@/lib/clubActivities";
 import type { ClubToast, QuestProgress } from "@/hooks/useClubProgress";
@@ -19,6 +19,7 @@ type ClubQuestPanelProps = {
   toasts: ClubToast[];
   onInteract: () => void;
   onCollect: () => void;
+  compact?: boolean;
 };
 
 export function ClubQuestPanel({
@@ -33,9 +34,15 @@ export function ClubQuestPanel({
   toasts,
   onInteract,
   onCollect,
+  compact = false,
 }: ClubQuestPanelProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const zoneAction = activeZone ? getZoneAction(activeZone.id) : null;
+
+  // Desktop: open by default once we know we're not on a phone.
+  useEffect(() => {
+    if (!compact) setOpen(true);
+  }, [compact]);
 
   return (
     <>
@@ -66,9 +73,10 @@ export function ClubQuestPanel({
       <div
         style={{
           position: "absolute",
-          right: 16,
-          bottom: 120,
-          width: "min(300px, calc(100vw - 32px))",
+          right: compact ? 8 : 16,
+          bottom: compact ? "auto" : 120,
+          top: compact ? 96 : undefined,
+          width: compact ? "min(180px, 42vw)" : "min(300px, calc(100vw - 32px))",
           zIndex: 55,
           pointerEvents: "auto",
         }}

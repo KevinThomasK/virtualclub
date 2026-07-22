@@ -66,7 +66,7 @@ export default function LoginPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
             gap: 20,
             alignItems: "start",
           }}
@@ -79,6 +79,7 @@ export default function LoginPage() {
               padding: 18,
               display: "grid",
               gap: 16,
+              order: 2,
             }}
           >
             <label style={{ display: "grid", gap: 8 }}>
@@ -95,6 +96,7 @@ export default function LoginPage() {
                   border: "1px solid rgba(148,163,184,0.25)",
                   background: "#0f172a",
                   color: "inherit",
+                  fontSize: 16,
                 }}
               />
             </label>
@@ -112,7 +114,10 @@ export default function LoginPage() {
                 color: "white",
                 fontWeight: 700,
                 cursor: loading ? "wait" : "pointer",
-                fontSize: 15,
+                fontSize: 16,
+                position: "sticky",
+                bottom: 12,
+                zIndex: 2,
               }}
             >
               {loading ? "Entering venue..." : "Enter the concert"}
@@ -129,6 +134,7 @@ export default function LoginPage() {
               gap: 14,
               position: "sticky",
               top: 16,
+              order: 1,
             }}
           >
             <div style={{ fontWeight: 700, fontSize: 15 }}>Live preview</div>

@@ -16,6 +16,7 @@ import type { AvatarOutfit } from "@/lib/avatarCatalog";
 import type { LiveTarget } from "@/hooks/useConcertRoom";
 import type { PhotoFlashEvent } from "@/hooks/useConcertRoom";
 import type { EmoteType, PlayerSnapshot } from "@/lib/types";
+import { isCoarsePointer, mobileInput } from "@/lib/mobileInput";
 
 const MOVE_SPEED = 5.4;
 const SPRINT_MULTIPLIER = 1.75;
@@ -270,6 +271,7 @@ function MouseLookControls({
   useEffect(() => {
     const canvas = gl.domElement;
     canvas.style.touchAction = "none";
+    const mobile = isCoarsePointer();
 
     const setLocked = (locked: boolean) => {
       lockedRef.current = locked;
@@ -327,6 +329,7 @@ function MouseLookControls({
     };
 
     const onCanvasClick = () => {
+      if (mobile) return; // phones use on-screen look pad, not pointer lock
       if (suppressLockClickRef.current) {
         suppressLockClickRef.current = false;
         return;
@@ -631,26 +634,53 @@ function LocalController({
     const delta = Math.min(rawDelta, MAX_FRAME_DELTA);
     const keys = keysRef.current;
     const inEmote = performance.now() < emoteUntilRef.current;
+
+    // Consume touch look deltas from the on-screen look pad.
+    if (mobileInput.lookX !== 0 || mobileInput.lookY !== 0) {
+      applyLookDelta(
+        mobileInput.lookX,
+        mobileInput.lookY,
+        cameraYawRef,
+        cameraPitchRef,
+        rotationRef,
+      );
+      mobileInput.lookX = 0;
+      mobileInput.lookY = 0;
+      isLookingRef.current = true;
+    }
+
     const forward =
       (keys.KeyW || keys.ArrowUp ? 1 : 0) -
-      (keys.KeyS || keys.ArrowDown ? 1 : 0);
+      (keys.KeyS || keys.ArrowDown ? 1 : 0) +
+      mobileInput.y;
     const strafe =
       (keys.KeyD || keys.ArrowRight ? 1 : 0) -
-      (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+      (keys.KeyA || keys.ArrowLeft ? 1 : 0) +
+      mobileInput.x;
+
+    const clampedForward = THREE.MathUtils.clamp(forward, -1, 1);
+    const clampedStrafe = THREE.MathUtils.clamp(strafe, -1, 1);
+    const moveMag = Math.hypot(clampedForward, clampedStrafe);
 
     let moving = false;
-    const sprinting = !!(keys.ShiftLeft || keys.ShiftRight);
-    if (forward !== 0 || strafe !== 0) {
+    const sprinting = !!(
+      keys.ShiftLeft ||
+      keys.ShiftRight ||
+      mobileInput.sprint
+    );
+    if (moveMag > 0.08) {
       moving = true;
       const yaw = cameraYawRef.current;
       camForward.set(Math.sin(yaw), 0, Math.cos(yaw));
       camRight.set(-Math.cos(yaw), 0, Math.sin(yaw));
       moveDir.set(0, 0, 0);
-      moveDir.addScaledVector(camForward, forward);
-      moveDir.addScaledVector(camRight, strafe);
-      moveDir.normalize();
+      moveDir.addScaledVector(camForward, clampedForward);
+      moveDir.addScaledVector(camRight, clampedStrafe);
+      if (moveDir.lengthSq() > 0) moveDir.normalize();
 
-      const speed = MOVE_SPEED * (sprinting ? SPRINT_MULTIPLIER : 1);
+      const analog = Math.min(1, moveMag);
+      const speed =
+        MOVE_SPEED * (sprinting ? SPRINT_MULTIPLIER : 1) * analog;
       positionRef.current.x += moveDir.x * speed * delta;
       positionRef.current.z += moveDir.z * speed * delta;
       // Smooth turn toward move direction — no snap when WASD changes.
@@ -942,7 +972,8 @@ export function ConcertScene(props: SceneProps) {
       onCreated={({ gl }) => {
         gl.domElement.tabIndex = 0;
         gl.domElement.focus();
-        gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+        const cap = isCoarsePointer() ? 1 : 1.25;
+        gl.setPixelRatio(Math.min(window.devicePixelRatio, cap));
       }}
     >
       <SceneContent {...props} />

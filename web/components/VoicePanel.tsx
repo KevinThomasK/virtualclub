@@ -13,6 +13,7 @@ type VoicePanelProps = {
   participants: PlayerSnapshot[];
   speakingIds: Set<string>;
   connectedIds: Set<string>;
+  mobile?: boolean;
 };
 
 /** Clubhouse-style panel shown while sitting in the voice lounge. */
@@ -27,6 +28,7 @@ export function VoicePanel({
   participants,
   speakingIds,
   connectedIds,
+  mobile = false,
 }: VoicePanelProps) {
   if (!seated) return null;
 
@@ -34,9 +36,11 @@ export function VoicePanel({
     <div
       style={{
         position: "absolute",
-        left: 16,
-        bottom: 24,
-        width: 250,
+        left: mobile ? 8 : 16,
+        ...(mobile
+          ? { top: "max(120px, calc(110px + env(safe-area-inset-top)))", bottom: "auto" }
+          : { bottom: 24 }),
+        width: mobile ? "min(220px, calc(100vw - 140px))" : 250,
         background: "rgba(6, 24, 20, 0.92)",
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(52, 211, 153, 0.45)",

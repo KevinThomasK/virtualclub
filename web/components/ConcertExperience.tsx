@@ -8,12 +8,14 @@ import { ConcertHUD } from "@/components/ConcertHUD";
 import { ClubMusic } from "@/components/ClubMusic";
 import { DjVotePanel } from "@/components/DjVotePanel";
 import { ChillPanel } from "@/components/ChillPanel";
+import { MobileControls } from "@/components/MobileControls";
 import { VoicePanel } from "@/components/VoicePanel";
 import { useClubProgress } from "@/hooks/useClubProgress";
 import { useConcertRoom } from "@/hooks/useConcertRoom";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
 import type { ConcertZone } from "@/lib/concertZones";
 import { VOICE_SEATS, LOUNGE_SEATS, LOUNGE_SEAT_OFFSET, isVoiceSeat, isLoungeSeat } from "@/lib/clubLayout";
+import { isCoarsePointer } from "@/lib/mobileInput";
 import type { EmoteType } from "@/lib/types";
 
 const ConcertScene = dynamic(
@@ -30,9 +32,17 @@ export function ConcertExperience() {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [showHelp, setShowHelp] = useState(true);
   const [mouseLookActive, setMouseLookActive] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   /** Optimistic seat index so G-to-sit isn't undone by in-flight move packets. */
   const [pendingSeat, setPendingSeat] = useState<number | null>(null);
   const [photoBurst, setPhotoBurst] = useState(0);
+
+  useEffect(() => {
+    const sync = () => setIsMobile(isCoarsePointer());
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, []);
 
   const progress = useClubProgress();
 
@@ -302,7 +312,14 @@ export function ConcertExperience() {
 
   return (
     <div
-      style={{ width: "100vw", height: "100vh", position: "relative" }}
+      className={isMobile ? "concert-shell concert-shell--mobile" : "concert-shell"}
+      style={{
+        width: "100vw",
+        height: "100dvh",
+        position: "relative",
+        overflow: "hidden",
+        touchAction: "none",
+      }}
       onPointerDown={() => setShowHelp(false)}
     >
       <ClubMusic
@@ -403,8 +420,15 @@ export function ConcertExperience() {
         ))}
       </div>
 
+      <MobileControls
+        visible={isMobile && !showHelp}
+        onInteract={handleInteract}
+        onDance={() => handleEmote("dance")}
+      />
+
       <ChillPanel
         seated={localLoungeSeated}
+        mobile={isMobile}
         onStand={() => {
           setPendingSeat(null);
           sendStand();
@@ -414,6 +438,7 @@ export function ConcertExperience() {
 
       <VoicePanel
         seated={localVoiceSeated}
+        mobile={isMobile}
         micReady={voice.micReady}
         micError={voice.micError}
         muted={voice.muted}
@@ -439,22 +464,26 @@ export function ConcertExperience() {
             zIndex: 100,
             pointerEvents: "auto",
             cursor: "pointer",
+            padding: 16,
           }}
           onClick={() => setShowHelp(false)}
         >
           <div
             style={{
               maxWidth: 440,
-              padding: "28px 32px",
+              width: "100%",
+              padding: isMobile ? "22px 18px" : "28px 32px",
               borderRadius: 20,
               background: "rgba(15, 16, 28, 0.95)",
               border: "1px solid rgba(129, 140, 248, 0.45)",
               boxShadow: "0 0 40px rgba(99, 102, 241, 0.25)",
               textAlign: "center",
               color: "#e2e8f0",
+              maxHeight: "min(90dvh, 640px)",
+              overflowY: "auto",
             }}
           >
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 8 }}>
+            <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 800, color: "#fff", marginBottom: 8 }}>
               Welcome to Pulse Club
             </div>
             <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.6, color: "#cbd5e1" }}>
@@ -472,16 +501,27 @@ export function ConcertExperience() {
                 marginBottom: 16,
               }}
             >
-              <div><strong style={{ color: "#67e8f9" }}>W A S D</strong> — explore the club</div>
-              <div><strong style={{ color: "#fde68a" }}>Shift</strong> — sprint while moving</div>
-              <div><strong style={{ color: "#fbbf24" }}>G</strong> — interact in a zone or collect tokens</div>
-              <div><strong style={{ color: "#a78bfa" }}>Quests</strong> — track goals in Club Activities (bottom-right)</div>
-              <div><strong style={{ color: "#f472b6" }}>Space / E / F / R</strong> — dance, wave, cheer, pose</div>
-              <div><strong style={{ color: "#818cf8" }}>Dance floor</strong> — dance together within 1s for Synced!</div>
-              <div><strong style={{ color: "#fb7185" }}>Photo wall</strong> — press G to snap a flash photo</div>
-              <div><strong style={{ color: "#a78bfa" }}>Chill Lounge</strong> — press G to sit on the couch &amp; sip</div>
+              {isMobile ? (
+                <>
+                  <div><strong style={{ color: "#67e8f9" }}>Left stick</strong> — move around</div>
+                  <div><strong style={{ color: "#f472b6" }}>Right pad</strong> — look / turn</div>
+                  <div><strong style={{ color: "#fbbf24" }}>Interact</strong> — sit, photo, zone actions</div>
+                  <div><strong style={{ color: "#fde68a" }}>Sprint</strong> — toggle faster run</div>
+                  <div><strong style={{ color: "#a78bfa" }}>Activities</strong> — quests (tap to expand)</div>
+                </>
+              ) : (
+                <>
+                  <div><strong style={{ color: "#67e8f9" }}>W A S D</strong> — explore the club</div>
+                  <div><strong style={{ color: "#fde68a" }}>Shift</strong> — sprint while moving</div>
+                  <div><strong style={{ color: "#fbbf24" }}>G</strong> — interact in a zone or collect tokens</div>
+                  <div><strong style={{ color: "#a78bfa" }}>Quests</strong> — track goals in Club Activities (bottom-right)</div>
+                  <div><strong style={{ color: "#f472b6" }}>Space / E / F / R</strong> — dance, wave, cheer, pose</div>
+                </>
+              )}
+              <div><strong style={{ color: "#818cf8" }}>Dance floor</strong> — dance together for Synced!</div>
+              <div><strong style={{ color: "#fb7185" }}>Photo wall</strong> — Interact to snap a flash photo</div>
               <div><strong style={{ color: "#f472b6" }}>DJ booth</strong> — vote Bass / Chill / Hyper</div>
-              <div><strong style={{ color: "#34d399" }}>Voice Lounge</strong> — walk to the green circle, press <strong>G</strong> (or click a stool) to sit &amp; talk live</div>
+              <div><strong style={{ color: "#34d399" }}>Voice Lounge</strong> — sit to talk live</div>
             </div>
             <div
               style={{
@@ -494,7 +534,7 @@ export function ConcertExperience() {
                 fontSize: 14,
               }}
             >
-              Click to Enter Club
+              {isMobile ? "Tap to Enter Club" : "Click to Enter Club"}
             </div>
           </div>
         </div>
@@ -512,6 +552,7 @@ export function ConcertExperience() {
         toasts={progress.toasts}
         onInteract={handleInteract}
         onCollect={handleInteract}
+        compact={isMobile}
       />
 
       <ConcertHUD
@@ -531,6 +572,7 @@ export function ConcertExperience() {
         onHype={handleHype}
         onLeave={() => signOut({ callbackUrl: "/" })}
         onInteract={handleInteract}
+        compact={isMobile}
       />
 
       {error ? (

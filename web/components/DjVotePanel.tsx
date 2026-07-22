@@ -74,10 +74,12 @@ export function DjVotePanel({
     <div
       style={{
         position: "absolute",
-        top: 110,
+        top: "max(100px, calc(88px + env(safe-area-inset-top)))",
         left: "50%",
         transform: "translateX(-50%)",
-        width: "min(440px, calc(100vw - 32px))",
+        width: "min(440px, calc(100vw - 24px))",
+        maxHeight: "min(42dvh, 320px)",
+        overflowY: "auto",
         background: "rgba(12, 8, 24, 0.94)",
         backdropFilter: "blur(12px)",
         border: "1px solid rgba(244, 114, 182, 0.45)",
