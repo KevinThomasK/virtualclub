@@ -2,42 +2,32 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        padding: 24,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 520,
-          textAlign: "center",
-          display: "grid",
-          gap: 16,
-        }}
-      >
-        <p style={{ color: "#94a3b8", margin: 0 }}>3D multiplayer starter</p>
-        <h1 style={{ margin: 0, fontSize: "2.5rem" }}>Virtual Concert</h1>
-        <p style={{ color: "#cbd5e1", lineHeight: 1.6 }}>
-          Log in, pick a name and color, then walk around a shared 3D stage with
-          other users. Press Space to dance.
+    <main className="landing">
+      <div className="landing__atmosphere" aria-hidden />
+      <div className="landing__beam landing__beam--left" aria-hidden />
+      <div className="landing__beam landing__beam--right" aria-hidden />
+      <div className="landing__floor" aria-hidden />
+      <div className="landing__noise" aria-hidden />
+
+      <div className="landing__content">
+        <h1 className="landing__brand">
+          Pulse
+          <span>Club</span>
+        </h1>
+
+        <p className="landing__headline">The room is already moving.</p>
+
+        <p className="landing__lede">
+          Drop into a live 3D club — dance, vote the DJ drop, snap photos, and
+          talk in the voice lounge with whoever shows up.
         </p>
-        <Link
-          href="/login"
-          style={{
-            justifySelf: "center",
-            background: "#6366f1",
-            color: "white",
-            textDecoration: "none",
-            padding: "12px 20px",
-            borderRadius: 999,
-            fontWeight: 600,
-          }}
-        >
-          Enter the venue
-        </Link>
+
+        <div className="landing__actions">
+          <Link href="/login" className="landing__cta">
+            Enter the club
+          </Link>
+          <span className="landing__meta">Live · Multiplayer · Free to join</span>
+        </div>
       </div>
     </main>
   );

@@ -41,6 +41,12 @@ export class ConcertState extends Schema {
   dropUntil = 0;
   energy = 0;
   partyUntil = 0;
+  /** Active DJ drop style: "", "bass", "chill", or "hyper". */
+  djMode = "";
+  djModeUntil = 0;
+  votesBass = 0;
+  votesChill = 0;
+  votesHyper = 0;
 }
 
 defineTypes(ConcertState, {
@@ -48,4 +54,9 @@ defineTypes(ConcertState, {
   dropUntil: "number",
   energy: "number",
   partyUntil: "number",
+  djMode: "string",
+  djModeUntil: "number",
+  votesBass: "number",
+  votesChill: "number",
+  votesHyper: "number",
 });

@@ -692,10 +692,16 @@ function AmbientCrowd() {
 type ClubEnvironmentProps = {
   dropActive: boolean;
   partyActive?: boolean;
+  djMode?: string;
 };
 
-export function ClubEnvironment({ dropActive, partyActive = false }: ClubEnvironmentProps) {
-  const boosted = dropActive || partyActive;
+export function ClubEnvironment({
+  dropActive,
+  partyActive = false,
+  djMode = "",
+}: ClubEnvironmentProps) {
+  const boosted = dropActive || partyActive || djMode === "hyper" || djMode === "bass";
+  const discoParty = partyActive || djMode === "hyper" || djMode === "bass";
 
   return (
     <group>
@@ -709,8 +715,8 @@ export function ClubEnvironment({ dropActive, partyActive = false }: ClubEnviron
       <ClubDecor />
       <CeilingLights />
       <AmbientCrowd />
-      <DiscoBall party={partyActive} />
-      <LaserShow party={partyActive} />
+      <DiscoBall party={discoParty} />
+      <LaserShow party={discoParty || djMode === "chill"} />
       <Sparkles
         count={boosted ? 100 : 50}
         scale={[width, 6, depth]}
@@ -718,7 +724,15 @@ export function ClubEnvironment({ dropActive, partyActive = false }: ClubEnviron
         size={boosted ? 3 : 2}
         speed={0.35}
         opacity={0.28}
-        color={boosted ? "#ff7eb9" : "#818cf8"}
+        color={
+          djMode === "chill"
+            ? "#67e8f9"
+            : djMode === "bass"
+              ? "#ff7eb9"
+              : boosted
+                ? "#ff7eb9"
+                : "#818cf8"
+        }
       />
     </group>
   );

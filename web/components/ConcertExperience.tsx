@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClubQuestPanel } from "@/components/ClubQuestPanel";
 import { ConcertHUD } from "@/components/ConcertHUD";
 import { ClubMusic } from "@/components/ClubMusic";
+import { DjVotePanel } from "@/components/DjVotePanel";
 import { VoicePanel } from "@/components/VoicePanel";
 import { useClubProgress } from "@/hooks/useClubProgress";
 import { useConcertRoom } from "@/hooks/useConcertRoom";
@@ -45,7 +46,12 @@ export function ConcertExperience() {
     dropUntil,
     energy,
     partyUntil,
+    djMode,
+    djModeUntil,
+    djVotes,
     reactions,
+    photoFlashes,
+    clubToasts,
     error,
     sendMove,
     sendEmote,
@@ -54,6 +60,8 @@ export function ConcertExperience() {
     sendReaction,
     sendSit,
     sendStand,
+    sendPhoto,
+    sendDjVote,
     sendVoiceSignal,
     setVoiceSignalHandler,
   } = useConcertRoom(
@@ -138,6 +146,19 @@ export function ConcertExperience() {
       return;
     }
 
+    // Photo wall — flash + pose broadcast to the whole club.
+    if (activeZone?.id === "photo") {
+      sendPhoto();
+      progress.interactZone(activeZone);
+      return;
+    }
+
+    // DJ booth — voting UI handles G; still record an interaction toast.
+    if (activeZone?.id === "dj") {
+      progress.interactZone(activeZone);
+      return;
+    }
+
     if (progress.tryCollectNearby()) return;
 
     const result = progress.interactZone(activeZone);
@@ -154,6 +175,7 @@ export function ConcertExperience() {
     localSeated,
     progress,
     seatedPlayers,
+    sendPhoto,
     sendSit,
     sendStand,
   ]);
@@ -205,13 +227,18 @@ export function ConcertExperience() {
 
   const dropActive = dropUntil > Date.now();
   const partyActive = partyUntil > Date.now();
+  const djLive = Boolean(djMode) && Date.now() < djModeUntil;
 
   return (
     <div
       style={{ width: "100vw", height: "100vh", position: "relative" }}
       onPointerDown={() => setShowHelp(false)}
     >
-      <ClubMusic enabled={musicEnabled} boost={dropActive || partyActive} />
+      <ClubMusic
+        enabled={musicEnabled}
+        boost={dropActive || partyActive || djMode === "bass" || djMode === "hyper"}
+        mode={djLive ? djMode : ""}
+      />
 
       <ConcertScene
         sessionId={sessionId}
@@ -221,6 +248,8 @@ export function ConcertExperience() {
         liveTargets={liveTargets}
         dropUntil={dropUntil}
         partyUntil={partyUntil}
+        djMode={djLive ? djMode : ""}
+        photoFlashes={photoFlashes}
         onMove={sendMove}
         onEmote={handleEmote}
         onZoneChange={handleZoneChange}
@@ -232,6 +261,48 @@ export function ConcertExperience() {
         onSit={sendSit}
         speakingIds={voice.speakingIds}
       />
+
+      <DjVotePanel
+        visible={activeZone?.id === "dj"}
+        votes={djVotes}
+        djMode={djMode}
+        djModeUntil={djModeUntil}
+        onVote={sendDjVote}
+      />
+
+      {/* Club-wide activity toasts (sync / photo / DJ drop) */}
+      <div
+        style={{
+          position: "absolute",
+          top: 90,
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "grid",
+          gap: 8,
+          zIndex: 70,
+          pointerEvents: "none",
+          width: "min(360px, calc(100vw - 32px))",
+        }}
+      >
+        {clubToasts.map((toast) => (
+          <div
+            key={toast.id}
+            style={{
+              padding: "10px 16px",
+              borderRadius: 12,
+              background: "rgba(10, 11, 18, 0.92)",
+              border: "1px solid rgba(167, 139, 250, 0.45)",
+              color: "#e9d5ff",
+              fontWeight: 700,
+              fontSize: 13,
+              textAlign: "center",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            }}
+          >
+            {toast.message}
+          </div>
+        ))}
+      </div>
 
       <VoicePanel
         seated={localSeated}
@@ -294,6 +365,9 @@ export function ConcertExperience() {
               <div><strong style={{ color: "#fbbf24" }}>G</strong> — interact in a zone or collect tokens</div>
               <div><strong style={{ color: "#a78bfa" }}>Quests</strong> — track goals in Club Activities (bottom-right)</div>
               <div><strong style={{ color: "#f472b6" }}>Space / E / F / R</strong> — dance, wave, cheer, pose</div>
+              <div><strong style={{ color: "#818cf8" }}>Dance floor</strong> — dance together within 1s for Synced!</div>
+              <div><strong style={{ color: "#fb7185" }}>Photo wall</strong> — press G to snap a flash photo</div>
+              <div><strong style={{ color: "#f472b6" }}>DJ booth</strong> — vote Bass / Chill / Hyper</div>
               <div><strong style={{ color: "#34d399" }}>Voice Lounge</strong> — walk to the green circle, press <strong>G</strong> (or click a stool) to sit &amp; talk live</div>
             </div>
             <div

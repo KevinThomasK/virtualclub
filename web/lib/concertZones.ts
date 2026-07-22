@@ -12,7 +12,7 @@ export const CONCERT_ZONES: ConcertZone[] = [
   {
     id: "dancefloor",
     label: "Main Dance Floor",
-    hint: "Center of the club — press Space to dance",
+    hint: "Dance with others within 1s for a Synced! bonus",
     x: 0,
     z: -2,
     radius: 7,
@@ -21,7 +21,7 @@ export const CONCERT_ZONES: ConcertZone[] = [
   {
     id: "dj",
     label: "DJ Booth",
-    hint: "Front row — feel the bass drop",
+    hint: "Vote for Bass / Chill / Hyper drop",
     x: 0,
     z: -14,
     radius: 4,
@@ -57,7 +57,7 @@ export const CONCERT_ZONES: ConcertZone[] = [
   {
     id: "photo",
     label: "Neon Photo Wall",
-    hint: "Press R for a photo pose",
+    hint: "Press G to snap a photo everyone sees",
     x: 16,
     z: 14,
     radius: 3.5,

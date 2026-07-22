@@ -30,12 +30,39 @@ type ConcertRoomState = {
   dropUntil: number;
   energy: number;
   partyUntil: number;
+  djMode: string;
+  djModeUntil: number;
+  votesBass: number;
+  votesChill: number;
+  votesHyper: number;
 };
 
 export type ReactionEvent = {
   id: string;
   emoji: string;
   name: string;
+};
+
+export type DanceSyncEvent = {
+  id: string;
+  names: string[];
+  count: number;
+};
+
+export type PhotoFlashEvent = {
+  id: string;
+  name: string;
+  sessionId: string;
+  x: number;
+  z: number;
+};
+
+export type DjStyle = "bass" | "chill" | "hyper";
+
+export type DjVotes = {
+  bass: number;
+  chill: number;
+  hyper: number;
 };
 
 type JoinOptions = {
@@ -107,7 +134,19 @@ export function useConcertRoom(options: JoinOptions | null) {
   const [dropUntil, setDropUntil] = useState(0);
   const [energy, setEnergy] = useState(0);
   const [partyUntil, setPartyUntil] = useState(0);
+  const [djMode, setDjMode] = useState("");
+  const [djModeUntil, setDjModeUntil] = useState(0);
+  const [djVotes, setDjVotes] = useState<DjVotes>({
+    bass: 0,
+    chill: 0,
+    hyper: 0,
+  });
   const [reactions, setReactions] = useState<ReactionEvent[]>([]);
+  const [danceSyncs, setDanceSyncs] = useState<DanceSyncEvent[]>([]);
+  const [photoFlashes, setPhotoFlashes] = useState<PhotoFlashEvent[]>([]);
+  const [clubToasts, setClubToasts] = useState<{ id: string; message: string }[]>(
+    [],
+  );
   const [error, setError] = useState<string | null>(null);
   const voiceHandlerRef = useRef<VoiceSignalHandler | null>(null);
   const liveTargetsRef = useRef<Map<string, LiveTarget>>(new Map());
@@ -138,6 +177,23 @@ export function useConcertRoom(options: JoinOptions | null) {
         setDropUntil(room.state.dropUntil);
         setEnergy(room.state.energy ?? 0);
         setPartyUntil(room.state.partyUntil ?? 0);
+        setDjMode(room.state.djMode ?? "");
+        setDjModeUntil(room.state.djModeUntil ?? 0);
+        setDjVotes({
+          bass: room.state.votesBass ?? 0,
+          chill: room.state.votesChill ?? 0,
+          hyper: room.state.votesHyper ?? 0,
+        });
+
+        const pushToast = (message: string) => {
+          const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          setClubToasts((current) => [...current.slice(-5), { id, message }]);
+          window.setTimeout(() => {
+            setClubToasts((current) =>
+              current.filter((entry) => entry.id !== id),
+            );
+          }, 4200);
+        };
 
         room.onMessage(
           "reaction",
@@ -152,6 +208,62 @@ export function useConcertRoom(options: JoinOptions | null) {
                 current.filter((entry) => entry.id !== id),
               );
             }, 3200);
+          },
+        );
+
+        room.onMessage(
+          "danceSync",
+          (payload: { names: string[]; count: number }) => {
+            const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+            setDanceSyncs((current) => [
+              ...current.slice(-4),
+              { id, names: payload.names, count: payload.count },
+            ]);
+            pushToast(
+              `Synced! ${payload.names.slice(0, 3).join(" + ")}${
+                payload.count > 3 ? ` +${payload.count - 3}` : ""
+              } 💃`,
+            );
+            window.setTimeout(() => {
+              setDanceSyncs((current) =>
+                current.filter((entry) => entry.id !== id),
+              );
+            }, 3500);
+          },
+        );
+
+        room.onMessage(
+          "photoFlash",
+          (payload: {
+            name: string;
+            sessionId: string;
+            x: number;
+            z: number;
+          }) => {
+            const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+            setPhotoFlashes((current) => [
+              ...current.slice(-5),
+              { id, ...payload },
+            ]);
+            pushToast(`${payload.name} snapped a photo 📸`);
+            window.setTimeout(() => {
+              setPhotoFlashes((current) =>
+                current.filter((entry) => entry.id !== id),
+              );
+            }, 2800);
+          },
+        );
+
+        room.onMessage(
+          "djDrop",
+          (payload: { style: string; votes: number; by: string }) => {
+            const label =
+              payload.style === "bass"
+                ? "Bass Drop"
+                : payload.style === "chill"
+                  ? "Chill Wave"
+                  : "Hyper Mode";
+            pushToast(`${label} won (${payload.votes} votes)! 🎧`);
           },
         );
 
@@ -204,6 +316,13 @@ export function useConcertRoom(options: JoinOptions | null) {
           setDropUntil(room.state.dropUntil);
           setEnergy(room.state.energy ?? 0);
           setPartyUntil(room.state.partyUntil ?? 0);
+          setDjMode(room.state.djMode ?? "");
+          setDjModeUntil(room.state.djModeUntil ?? 0);
+          setDjVotes({
+            bass: room.state.votesBass ?? 0,
+            chill: room.state.votesChill ?? 0,
+            hyper: room.state.votesHyper ?? 0,
+          });
         };
 
         syncFromState();
@@ -226,7 +345,13 @@ export function useConcertRoom(options: JoinOptions | null) {
       setDropUntil(0);
       setEnergy(0);
       setPartyUntil(0);
+      setDjMode("");
+      setDjModeUntil(0);
+      setDjVotes({ bass: 0, chill: 0, hyper: 0 });
       setReactions([]);
+      setDanceSyncs([]);
+      setPhotoFlashes([]);
+      setClubToasts([]);
       liveTargetsRef.current.clear();
       snapshotRef.current = [];
     };
@@ -281,6 +406,14 @@ export function useConcertRoom(options: JoinOptions | null) {
     roomRef.current?.send("stand", { type: "stand" });
   }, []);
 
+  const sendPhoto = useCallback(() => {
+    roomRef.current?.send("photo", { type: "photo" });
+  }, []);
+
+  const sendDjVote = useCallback((style: DjStyle) => {
+    roomRef.current?.send("djVote", { type: "djVote", style });
+  }, []);
+
   const sendVoiceSignal = useCallback((to: string, data: unknown) => {
     roomRef.current?.send("voice", { type: "voice", to, data });
   }, []);
@@ -300,7 +433,13 @@ export function useConcertRoom(options: JoinOptions | null) {
     dropUntil,
     energy,
     partyUntil,
+    djMode,
+    djModeUntil,
+    djVotes,
     reactions,
+    danceSyncs,
+    photoFlashes,
+    clubToasts,
     error,
     sendMove,
     sendEmote,
@@ -309,6 +448,8 @@ export function useConcertRoom(options: JoinOptions | null) {
     sendReaction,
     sendSit,
     sendStand,
+    sendPhoto,
+    sendDjVote,
     sendVoiceSignal,
     setVoiceSignalHandler,
   };

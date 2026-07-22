@@ -8,11 +8,13 @@ import * as THREE from "three";
 import { Avatar } from "@/components/Avatar";
 import { ClubCollectibles } from "@/components/ClubCollectibles";
 import { ClubEnvironment } from "@/components/ClubEnvironment";
+import { PhotoFlashes } from "@/components/PhotoFlashes";
 import { CLUB_BOUNDS, VOICE_SEATS } from "@/lib/clubLayout";
 import { CONCERT_ZONES, getZoneAt } from "@/lib/concertZones";
 import type { ConcertZone } from "@/lib/concertZones";
 import type { AvatarOutfit } from "@/lib/avatarCatalog";
 import type { LiveTarget } from "@/hooks/useConcertRoom";
+import type { PhotoFlashEvent } from "@/hooks/useConcertRoom";
 import type { EmoteType, PlayerSnapshot } from "@/lib/types";
 
 const MOVE_SPEED = 5.4;
@@ -45,6 +47,8 @@ type SceneProps = {
   liveTargets: Map<string, LiveTarget>;
   dropUntil: number;
   partyUntil: number;
+  djMode: string;
+  photoFlashes: PhotoFlashEvent[];
   onMove: (payload: {
     x: number;
     y: number;
@@ -810,26 +814,54 @@ function RemotePlayers({
 function SceneContent(props: SceneProps) {
   const dropActive = props.dropUntil > Date.now();
   const partyActive = props.partyUntil > Date.now();
-  const boosted = dropActive || partyActive;
+  const djActive = Boolean(props.djMode);
+  const boosted = dropActive || partyActive || props.djMode === "hyper";
+
+  const djAccent =
+    props.djMode === "bass"
+      ? "#f472b6"
+      : props.djMode === "chill"
+        ? "#22d3ee"
+        : props.djMode === "hyper"
+          ? "#fbbf24"
+          : "#f472b6";
 
   return (
     <>
       <color attach="background" args={["#0c0c18"]} />
       <fog attach="fog" args={["#0c0c18", 28, 75]} />
-      <ambientLight intensity={boosted ? 0.65 : 0.5} />
-      <hemisphereLight args={["#c4b5fd", "#1e1b4b", 0.55]} />
+      <ambientLight intensity={boosted ? 0.7 : djActive ? 0.58 : 0.5} />
+      <hemisphereLight
+        args={[
+          props.djMode === "chill" ? "#a5f3fc" : "#c4b5fd",
+          "#1e1b4b",
+          0.55,
+        ]}
+      />
       <directionalLight
         castShadow
-        intensity={0.85}
+        intensity={props.djMode === "bass" ? 0.7 : 0.85}
         position={[0, 16, 8]}
         shadow-mapSize={[1024, 1024]}
       />
-      <pointLight position={[0, 6, -10]} intensity={25} color="#f472b6" distance={35} />
+      <pointLight
+        position={[0, 6, -10]}
+        intensity={props.djMode === "bass" ? 40 : props.djMode === "hyper" ? 35 : 25}
+        color={djAccent}
+        distance={35}
+      />
       <pointLight position={[-18, 5, 2]} intensity={18} color="#22d3ee" distance={22} />
       <pointLight position={[18, 5, -4]} intensity={18} color="#fbbf24" distance={22} />
+      {props.djMode === "hyper" ? (
+        <pointLight position={[0, 8, 0]} intensity={28} color="#a78bfa" distance={30} />
+      ) : null}
       <Environment preset="warehouse" />
 
-      <ClubEnvironment dropActive={dropActive} partyActive={partyActive} />
+      <ClubEnvironment
+        dropActive={dropActive}
+        partyActive={partyActive || props.djMode === "hyper"}
+        djMode={props.djMode}
+      />
       <ClubCollectibles collectedIds={props.collectedTokenIds} />
       <ZoneLabels />
       <InteractiveZones />
@@ -840,6 +872,7 @@ function SceneContent(props: SceneProps) {
         }
         onSit={props.onSit}
       />
+      <PhotoFlashes flashes={props.photoFlashes} />
       <Confetti boost={boosted} />
 
       <LocalController {...props} />
@@ -851,7 +884,18 @@ function SceneContent(props: SceneProps) {
       />
 
       <EffectComposer>
-        <Bloom intensity={0.65} luminanceThreshold={0.25} luminanceSmoothing={0.4} mipmapBlur />
+        <Bloom
+          intensity={
+            props.djMode === "bass"
+              ? 0.9
+              : props.djMode === "hyper"
+                ? 1.05
+                : 0.65
+          }
+          luminanceThreshold={0.25}
+          luminanceSmoothing={0.4}
+          mipmapBlur
+        />
         <Vignette eskil={false} offset={0.3} darkness={0.35} />
       </EffectComposer>
     </>

@@ -15,8 +15,18 @@ const HYPE_COOLDOWN_MS = 12000;
 const HYPE_DURATION_MS = 7000;
 const PARTY_DURATION_MS = 15000;
 const ENERGY_DECAY_PER_SECOND = 1.5;
+const DANCE_SYNC_WINDOW_MS = 1000;
+const DANCE_SYNC_COOLDOWN_MS = 4000;
+const PHOTO_COOLDOWN_MS = 5000;
+const DJ_MODE_DURATION_MS = 15000;
+const DJ_VOTE_THRESHOLD = 2;
 
 const REACTION_EMOJIS = new Set(["❤️", "🔥", "🎉", "⚡", "👏", "😂"]);
+const DJ_STYLES = new Set(["bass", "chill", "hyper"]);
+
+const DANCE_FLOOR = { x: 0, z: -2, radius: 7 };
+const PHOTO_WALL = { x: 16, z: 14, radius: 3.8 };
+const DJ_ZONE = { x: 0, z: -14, radius: 5 };
 
 // Voice lounge seats — must match web/lib/clubLayout.ts VOICE_LOUNGE.
 const VOICE_LOUNGE_CENTER = { x: 8, z: 13 };
@@ -83,15 +93,37 @@ type VoiceSignalMessage = {
   data: unknown;
 };
 
+type DjVoteMessage = {
+  type: "djVote";
+  style: "bass" | "chill" | "hyper";
+};
+
+type PhotoMessage = {
+  type: "photo";
+};
+
 const VALID_EMOTES = new Set(["dance", "wave", "cheer", "pose"]);
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function inRadius(
+  player: Player,
+  zone: { x: number; z: number; radius: number },
+) {
+  const dx = player.x - zone.x;
+  const dz = player.z - zone.z;
+  return dx * dx + dz * dz <= zone.radius * zone.radius;
+}
+
 export class ConcertRoom extends Room<ConcertState> {
   maxClients = 80;
   private lastHypeAt = 0;
+  private lastDanceSyncAt = 0;
+  private recentDances: { sessionId: string; name: string; at: number }[] = [];
+  private lastPhotoAt = new Map<string, number>();
+  private djVotes = new Map<string, "bass" | "chill" | "hyper">();
 
   onCreate() {
     const state = new ConcertState();
@@ -99,6 +131,11 @@ export class ConcertRoom extends Room<ConcertState> {
     state.dropUntil = 0;
     state.energy = 0;
     state.partyUntil = 0;
+    state.djMode = "";
+    state.djModeUntil = 0;
+    state.votesBass = 0;
+    state.votesChill = 0;
+    state.votesHyper = 0;
     this.setState(state);
 
     // Crowd energy slowly cools off so the meter stays meaningful.
@@ -108,6 +145,11 @@ export class ConcertRoom extends Room<ConcertState> {
           0,
           this.state.energy - ENERGY_DECAY_PER_SECOND,
         );
+      }
+      // Clear expired DJ mode.
+      if (this.state.djMode && Date.now() > this.state.djModeUntil) {
+        this.state.djMode = "";
+        this.state.djModeUntil = 0;
       }
     }, 1000);
 
@@ -145,6 +187,7 @@ export class ConcertRoom extends Room<ConcertState> {
           if (entry.anim === "dance") dancers += 1;
         });
         if (dancers >= 2) gain += 6;
+        this.tryDanceSync(client.sessionId, player);
       }
       this.addEnergy(gain);
 
@@ -181,6 +224,44 @@ export class ConcertRoom extends Room<ConcertState> {
         name: player.name,
         sessionId: client.sessionId,
       });
+    });
+
+    this.onMessage("photo", (client, _message: PhotoMessage) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player || !inRadius(player, PHOTO_WALL)) return;
+
+      const now = Date.now();
+      const last = this.lastPhotoAt.get(client.sessionId) ?? 0;
+      if (now - last < PHOTO_COOLDOWN_MS) return;
+      this.lastPhotoAt.set(client.sessionId, now);
+
+      player.anim = "pose";
+      this.addEnergy(6);
+      this.broadcast("photoFlash", {
+        name: player.name,
+        sessionId: client.sessionId,
+        x: player.x,
+        z: player.z,
+      });
+
+      this.clock.setTimeout(() => {
+        if (player.anim === "pose") {
+          player.anim = player.seat >= 0 ? "sit" : "idle";
+        }
+      }, EMOTE_DURATION_MS);
+    });
+
+    this.onMessage("djVote", (client, message: DjVoteMessage) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player || !DJ_STYLES.has(message.style)) return;
+      if (!inRadius(player, DJ_ZONE)) return;
+
+      // Can't change the queue while a drop is already playing.
+      if (this.state.djMode && Date.now() < this.state.djModeUntil) return;
+
+      this.djVotes.set(client.sessionId, message.style);
+      this.recountDjVotes();
+      this.tryResolveDjVote(player.name);
     });
 
     this.onMessage("sit", (client, message: SitMessage) => {
@@ -242,6 +323,7 @@ export class ConcertRoom extends Room<ConcertState> {
       if (!player) return;
 
       player.anim = "dance";
+      this.tryDanceSync(client.sessionId, player);
       this.clock.setTimeout(() => {
         if (player.anim === "dance") {
           player.anim = "idle";
@@ -268,6 +350,85 @@ export class ConcertRoom extends Room<ConcertState> {
 
   onLeave(client: Client) {
     this.state.players.delete(client.sessionId);
+    this.lastPhotoAt.delete(client.sessionId);
+    if (this.djVotes.delete(client.sessionId)) {
+      this.recountDjVotes();
+    }
+  }
+
+  /** Two+ dancers on the floor within ~1s → Synced! broadcast + energy spike. */
+  private tryDanceSync(sessionId: string, player: Player) {
+    if (!inRadius(player, DANCE_FLOOR)) return;
+
+    const now = Date.now();
+    this.recentDances.push({
+      sessionId,
+      name: player.name,
+      at: now,
+    });
+    this.recentDances = this.recentDances.filter(
+      (entry) => now - entry.at <= DANCE_SYNC_WINDOW_MS,
+    );
+
+    const unique = new Map<string, string>();
+    for (const entry of this.recentDances) {
+      unique.set(entry.sessionId, entry.name);
+    }
+    if (unique.size < 2) return;
+    if (now - this.lastDanceSyncAt < DANCE_SYNC_COOLDOWN_MS) return;
+
+    this.lastDanceSyncAt = now;
+    this.recentDances = [];
+    this.addEnergy(22);
+    this.broadcast("danceSync", {
+      names: Array.from(unique.values()).slice(0, 6),
+      count: unique.size,
+    });
+  }
+
+  private recountDjVotes() {
+    let bass = 0;
+    let chill = 0;
+    let hyper = 0;
+    this.djVotes.forEach((style) => {
+      if (style === "bass") bass += 1;
+      else if (style === "chill") chill += 1;
+      else hyper += 1;
+    });
+    this.state.votesBass = bass;
+    this.state.votesChill = chill;
+    this.state.votesHyper = hyper;
+  }
+
+  private tryResolveDjVote(voterName: string) {
+    const { votesBass, votesChill, votesHyper } = this.state;
+    const total = votesBass + votesChill + votesHyper;
+    if (total < DJ_VOTE_THRESHOLD) return;
+
+    const ranked: Array<{ style: "bass" | "chill" | "hyper"; votes: number }> = [
+      { style: "bass" as const, votes: votesBass },
+      { style: "chill" as const, votes: votesChill },
+      { style: "hyper" as const, votes: votesHyper },
+    ].sort((a, b) => b.votes - a.votes);
+
+    const winner = ranked[0];
+    const runner = ranked[1];
+    // Need a clear lead (or a solo majority at the threshold).
+    if (winner.votes < DJ_VOTE_THRESHOLD) return;
+    if (winner.votes === runner.votes) return;
+
+    const now = Date.now();
+    this.state.djMode = winner.style;
+    this.state.djModeUntil = now + DJ_MODE_DURATION_MS;
+    this.djVotes.clear();
+    this.recountDjVotes();
+    this.addEnergy(18);
+
+    this.broadcast("djDrop", {
+      style: winner.style,
+      votes: winner.votes,
+      by: voterName,
+    });
   }
 
   /** Fill the shared crowd meter; at 100% the whole club enters Party Mode. */

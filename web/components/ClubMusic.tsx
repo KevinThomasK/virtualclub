@@ -5,12 +5,19 @@ import { useEffect, useRef } from "react";
 type ClubMusicProps = {
   enabled: boolean;
   boost: boolean;
+  /** DJ queue winner: bass / chill / hyper — reshapes the procedural loop. */
+  mode?: string;
 };
 
 /** Procedural four-on-the-floor club loop (no external files, works offline). */
-export function ClubMusic({ enabled, boost }: ClubMusicProps) {
+export function ClubMusic({ enabled, boost, mode = "" }: ClubMusicProps) {
   const ctxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
+  const bassRef = useRef<OscillatorNode | null>(null);
+  const padRef = useRef<OscillatorNode | null>(null);
+  const bassFilterRef = useRef<BiquadFilterNode | null>(null);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   useEffect(() => {
     if (!enabled) {
@@ -18,6 +25,9 @@ export function ClubMusic({ enabled, boost }: ClubMusicProps) {
         void ctxRef.current.close();
         ctxRef.current = null;
         masterGainRef.current = null;
+        bassRef.current = null;
+        padRef.current = null;
+        bassFilterRef.current = null;
       }
       return;
     }
@@ -42,6 +52,8 @@ export function ClubMusic({ enabled, boost }: ClubMusicProps) {
     bassFilter.connect(bassGain);
     bassGain.connect(master);
     bass.start();
+    bassRef.current = bass;
+    bassFilterRef.current = bassFilter;
 
     const pad = ctx.createOscillator();
     pad.type = "triangle";
@@ -51,6 +63,7 @@ export function ClubMusic({ enabled, boost }: ClubMusicProps) {
     pad.connect(padGain);
     padGain.connect(master);
     pad.start();
+    padRef.current = pad;
 
     let step = 0;
     const interval = window.setInterval(() => {
@@ -60,29 +73,69 @@ export function ClubMusic({ enabled, boost }: ClubMusicProps) {
       const beat = step % 4 === 0;
       const loud = masterGainRef.current?.gain.value ?? 0.14;
       const isBoost = loud > 0.18;
+      const currentMode = modeRef.current;
 
       if (beat) {
         const kick = ctx.createOscillator();
         const kickGain = ctx.createGain();
         kick.type = "sine";
-        kick.frequency.setValueAtTime(150, t);
-        kick.frequency.exponentialRampToValueAtTime(42, t + 0.12);
-        kickGain.gain.setValueAtTime(isBoost ? 0.35 : 0.28, t);
+        const kickStart =
+          currentMode === "bass" ? 180 : currentMode === "hyper" ? 160 : 150;
+        const kickEnd =
+          currentMode === "bass" ? 36 : currentMode === "chill" ? 50 : 42;
+        kick.frequency.setValueAtTime(kickStart, t);
+        kick.frequency.exponentialRampToValueAtTime(kickEnd, t + 0.12);
+        const kickVol =
+          currentMode === "bass"
+            ? isBoost
+              ? 0.42
+              : 0.34
+            : currentMode === "chill"
+              ? 0.2
+              : isBoost
+                ? 0.35
+                : 0.28;
+        kickGain.gain.setValueAtTime(kickVol, t);
         kickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
         kick.connect(kickGain);
         kickGain.connect(master);
         kick.start(t);
         kick.stop(t + 0.2);
 
-        bass.frequency.setTargetAtTime(beat && step % 8 === 0 ? 48 : 55, t, 0.05);
+        const bassNote =
+          currentMode === "bass"
+            ? step % 8 === 0
+              ? 40
+              : 48
+            : currentMode === "chill"
+              ? 62
+              : currentMode === "hyper"
+                ? step % 8 === 0
+                  ? 70
+                  : 55
+                : step % 8 === 0
+                  ? 48
+                  : 55;
+        bass.frequency.setTargetAtTime(bassNote, t, 0.05);
       }
 
-      if (step % 2 === 1) {
+      // Hyper mode adds off-beat clacks; chill skips some hats.
+      const hatOn =
+        currentMode === "hyper"
+          ? step % 2 === 1 || step % 4 === 2
+          : currentMode === "chill"
+            ? step % 4 === 1
+            : step % 2 === 1;
+
+      if (hatOn) {
         const hat = ctx.createOscillator();
         const hatGain = ctx.createGain();
         hat.type = "square";
-        hat.frequency.value = 8000;
-        hatGain.gain.setValueAtTime(0.015, t);
+        hat.frequency.value = currentMode === "hyper" ? 10000 : 8000;
+        hatGain.gain.setValueAtTime(
+          currentMode === "chill" ? 0.008 : currentMode === "hyper" ? 0.022 : 0.015,
+          t,
+        );
         hatGain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
         const hatFilter = ctx.createBiquadFilter();
         hatFilter.type = "highpass";
@@ -102,14 +155,43 @@ export function ClubMusic({ enabled, boost }: ClubMusicProps) {
       void ctx.close();
       ctxRef.current = null;
       masterGainRef.current = null;
+      bassRef.current = null;
+      padRef.current = null;
+      bassFilterRef.current = null;
     };
   }, [enabled]);
 
   useEffect(() => {
     const master = masterGainRef.current;
     if (!master) return;
-    master.gain.setTargetAtTime(boost ? 0.22 : 0.14, master.context.currentTime, 0.08);
-  }, [boost]);
+    const base = boost || mode === "bass" || mode === "hyper" ? 0.22 : 0.14;
+    const chillSoft = mode === "chill" ? 0.16 : base;
+    master.gain.setTargetAtTime(
+      mode === "chill" ? chillSoft : base,
+      master.context.currentTime,
+      0.08,
+    );
+  }, [boost, mode]);
+
+  useEffect(() => {
+    const bassFilter = bassFilterRef.current;
+    const pad = padRef.current;
+    if (!bassFilter || !pad) return;
+    const t = bassFilter.context.currentTime;
+    if (mode === "bass") {
+      bassFilter.frequency.setTargetAtTime(120, t, 0.2);
+      pad.frequency.setTargetAtTime(90, t, 0.2);
+    } else if (mode === "chill") {
+      bassFilter.frequency.setTargetAtTime(240, t, 0.2);
+      pad.frequency.setTargetAtTime(140, t, 0.2);
+    } else if (mode === "hyper") {
+      bassFilter.frequency.setTargetAtTime(280, t, 0.2);
+      pad.frequency.setTargetAtTime(165, t, 0.2);
+    } else {
+      bassFilter.frequency.setTargetAtTime(180, t, 0.2);
+      pad.frequency.setTargetAtTime(110, t, 0.2);
+    }
+  }, [mode]);
 
   return null;
 }

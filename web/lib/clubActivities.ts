@@ -30,7 +30,7 @@ export const CLUB_QUESTS: ClubQuest[] = [
     title: "Club Explorer",
     description: "Visit every area of the club",
     reward: "+VIP glow aura",
-    target: 6,
+    target: 7,
     metric: "zones",
   },
   {
@@ -76,17 +76,10 @@ export const CLUB_QUESTS: ClubQuest[] = [
 ];
 
 export const ZONE_ACTIONS: Record<string, ZoneAction> = {
-  dancefloor: {
-    label: "Start dance",
-    hint: "Hit the floor — auto dance emote",
-    chatMessage: "Let's go! 🔥",
-    emote: "dance",
-  },
   dj: {
-    label: "Hype the DJ",
-    hint: "Show love to the booth",
-    chatMessage: "Drop the bass! 🎧",
-    emote: "cheer",
+    label: "Vote for next drop",
+    hint: "Pick Bass / Chill / Hyper — 2 votes wins",
+    chatMessage: "Voting on the next drop! 🎧",
   },
   bar: {
     label: "Order neon drink",
@@ -107,10 +100,16 @@ export const ZONE_ACTIONS: Record<string, ZoneAction> = {
     emote: "wave",
   },
   photo: {
-    label: "Photo snap",
-    hint: "Strike a pose at the wall",
+    label: "Take a photo",
+    hint: "Flash + pose — everyone nearby sees it",
     chatMessage: "Photo at the neon wall! 📸",
     emote: "pose",
+  },
+  dancefloor: {
+    label: "Start dance",
+    hint: "Dance together within 1s for a Synced! bonus",
+    chatMessage: "Let's go! 🔥",
+    emote: "dance",
   },
   // Display-only: the voice zone's G action is handled specially
   // (sit/stand + WebRTC) in ConcertExperience, not via chat/emote.
