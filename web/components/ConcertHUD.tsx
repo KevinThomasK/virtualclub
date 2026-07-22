@@ -269,7 +269,7 @@ export function ConcertHUD({
               transition: "all 0.2s ease",
             }}
           >
-            {musicEnabled ? "🎧 DJ On" : "🔇 Enable DJ"}
+            {musicEnabled ? "🎧 DJ Live" : "🔇 Enable Music"}
           </button>
           <button
             onClick={onLeave}
